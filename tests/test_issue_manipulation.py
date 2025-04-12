@@ -1,8 +1,8 @@
 import pytest
 from datetime import datetime
-from linearpy.issue_manipulation import create_issue, set_parent_issue, get_linear_issue
-from linearpy.domain import Issue, Team, LinearIssueInput, LinearPriority
-from linearpy.get_resources import team_name_to_id, get_teams
+from linear_api.issue_manipulation import create_issue, set_parent_issue, get_linear_issue
+from linear_api.domain import Issue, Team, LinearIssueInput, LinearPriority
+from linear_api.get_resources import team_name_to_id, get_teams
 
 
 @pytest.fixture
@@ -63,7 +63,7 @@ def test_create_issue_with_different_priority(test_team_name):
 def test_create_issue_with_state_and_project(test_team_name):
     """Test creating an issue with state and project names."""
     # Get the first available state and project for the team
-    from linearpy.get_resources import get_states, get_projects, team_name_to_id
+    from linear_api.get_resources import get_states, get_projects, team_name_to_id
 
     team_id = team_name_to_id(test_team_name)
     states = get_states(team_id)

@@ -2,7 +2,7 @@ from typing import Optional, Dict, Union, List
 
 from pydantic import BaseModel, Field
 
-from linearpy.call_linear_api import call_linear_api
+from linear_api.call_linear_api import call_linear_api
 
 
 class Team(BaseModel):

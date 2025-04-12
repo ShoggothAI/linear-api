@@ -1,4 +1,4 @@
-# linearpy
+# linear_api
 A set of Python utilities for calling the Linear API
 
 # Other Python wrappers for Linear API

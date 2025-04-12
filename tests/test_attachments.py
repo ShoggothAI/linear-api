@@ -1,8 +1,8 @@
 import pytest
 from datetime import datetime
-from linearpy.issue_manipulation import create_issue, create_attachment, get_linear_issue
-from linearpy.domain import LinearIssueInput, LinearPriority, LinearAttachment, LinearAttachmentInput
-from linearpy.get_resources import team_name_to_id
+from linear_api.issue_manipulation import create_issue, create_attachment, get_linear_issue
+from linear_api.domain import LinearIssueInput, LinearPriority, LinearAttachment, LinearAttachmentInput
+from linear_api.get_resources import team_name_to_id
 
 
 @pytest.fixture

@@ -1,5 +1,5 @@
 import pytest
-from linearpy.get_resources import (
+from linear_api.get_resources import (
     LinearResourceType,
     get_resources,
     resource_name_to_id,
@@ -111,7 +111,7 @@ class TestResourceCache:
     def test_cache_key_creation(self):
         """Test that cache keys are created correctly by observing cache behavior."""
         # Clear any existing cache from previous tests
-        from linearpy.get_resources import _cache
+        from linear_api.get_resources import _cache
         _cache.clear()
 
         # Get teams to populate the cache
@@ -152,7 +152,7 @@ class TestResourceCache:
     def test_cache_hit(self):
         """Test that the cache is used when available by measuring response time."""
         # Clear any existing cache
-        from linearpy.get_resources import _cache
+        from linear_api.get_resources import _cache
         _cache.clear()
 
         # Get teams to work with
@@ -184,7 +184,7 @@ class TestResourceCache:
     def test_cache_refresh_on_miss(self):
         """Test that the cache is refreshed when a resource is not found."""
         # Clear any existing cache
-        from linearpy.get_resources import _cache
+        from linear_api.get_resources import _cache
         import time
         _cache.clear()
 
@@ -294,7 +294,7 @@ class TestIntegration:
 
     def test_call_linear_api_directly(self):
         """Test calling the Linear API directly with a GraphQL query."""
-        from linearpy.call_linear_api import call_linear_api
+        from linear_api.call_linear_api import call_linear_api
 
         # Simple query to get teams
         query = """

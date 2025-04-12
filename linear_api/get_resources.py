@@ -2,7 +2,7 @@ from enum import StrEnum
 from functools import lru_cache
 from typing import Dict, List, Optional, Callable, Any, Tuple
 
-from linearpy.call_linear_api import call_linear_api
+from linear_api.call_linear_api import call_linear_api
 
 class LinearResourceType(StrEnum):
     """Enum representing different types of Linear resources."""

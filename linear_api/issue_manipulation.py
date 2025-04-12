@@ -2,10 +2,10 @@ from typing import Optional, Dict, Any
 
 from datetime import datetime
 
-from linearpy.call_linear_api import call_linear_api
-from linearpy.domain import LinearAttachment, LinearIssue, LinearLabel, LinearState, LinearUser, LinearProject, \
+from linear_api.call_linear_api import call_linear_api
+from linear_api.domain import LinearAttachment, LinearIssue, LinearLabel, LinearState, LinearUser, LinearProject, \
     LinearTeam, LinearPriority, LinearIssueInput, LinearAttachmentInput
-from linearpy.get_resources import team_name_to_id, state_name_to_id, project_name_to_id
+from linear_api.get_resources import team_name_to_id, state_name_to_id, project_name_to_id
 
 
 def create_issue(issue: LinearIssueInput):
