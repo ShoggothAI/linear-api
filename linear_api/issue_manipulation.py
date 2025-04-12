@@ -209,6 +209,79 @@ def get_linear_issue(issue_id: str) -> LinearIssue:
     return issue
 
 
+def get_team_issues(team_name: str) -> Dict[str, str]:
+    """
+    Get all issues for a specific team.
+
+    Args:
+        team_name: The name of the team to get issues for
+
+    Returns:
+        A dictionary mapping issue IDs to their titles
+
+    Raises:
+        ValueError: If the team name doesn't exist
+    """
+    # Convert team name to ID
+    team_id = team_name_to_id(team_name)
+
+    # GraphQL query to get all issues for a team
+    query = """
+    query GetTeamIssues($teamId: ID!) {
+        issues(filter: { team: { id: { eq: $teamId } } }) {
+            nodes {
+                id
+                title
+            }
+        }
+    }
+    """
+
+    # Call the Linear API
+    response = call_linear_api({"query": query, "variables": {"teamId": team_id}})
+
+    # Create a dictionary mapping issue IDs to titles
+    issues = {}
+    for issue in response["issues"]["nodes"]:
+        issues[issue["id"]] = issue["title"]
+
+    return issues
+
+
+def delete_issue(issue_id: str) -> Dict[str, Any]:
+    """
+    Delete an issue by its ID.
+
+    Args:
+        issue_id: The ID of the issue to delete
+
+    Returns:
+        The response from the Linear API
+
+    Raises:
+        ValueError: If the issue doesn't exist or can't be deleted
+    """
+    # GraphQL mutation to delete an issue
+    delete_issue_mutation = """
+    mutation DeleteIssue($issueId: String!) {
+        issueDelete(id: $issueId) {
+            success
+        }
+    }
+    """
+
+    # Prepare the GraphQL request
+    variables = {"issueId": issue_id}
+
+    # Call the Linear API
+    response = call_linear_api({"query": delete_issue_mutation, "variables": variables})
+
+    # Check if the deletion was successful
+    if response is None or not response.get("issueDelete", {}).get("success", False):
+        raise ValueError(f"Failed to delete issue with ID: {issue_id}")
+
+    return response
+
 
 def create_attachment(attachment:LinearAttachmentInput):
     mutation = """

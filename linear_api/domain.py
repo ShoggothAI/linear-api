@@ -1,27 +1,8 @@
 from typing import Optional, Dict, Union, List
-
-from pydantic import BaseModel, Field
-
-from linear_api.call_linear_api import call_linear_api
-
-
-class Team(BaseModel):
-    id: str
-    name: str
-
-class Issue(BaseModel):
-    id: str
-    title: str
-    team: Team
-    description: str
-    priority: int = Field(default=1)
-    parent: Optional["Issue"] = None
-
-
 from datetime import datetime
 from enum import Enum
 from typing import List, Optional
-import httpx
+
 from pydantic import BaseModel, Field
 
 

@@ -1,7 +1,7 @@
 # linear_api
 A set of Python utilities for calling the Linear API
 
-# Other Python wrappers for Linear API
+# Other Python wrappers for Linear API (do you know of any others?)
 [linear-py](https://gitlab.com/thinkhuman-public/linear-py) 
 Extremely basic, only allows issue creation and to query for teams, states and projects
 
