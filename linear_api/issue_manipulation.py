@@ -3,7 +3,7 @@ from typing import Optional, Dict, Any
 from datetime import datetime
 
 from linear_api.call_linear_api import call_linear_api
-from linear_api.domain import LinearAttachment, LinearIssue, LinearLabel, LinearState, LinearUser, LinearProject, \
+from linear_api.domain import LinearAttachment, LinearIssue, LinearLabel, LinearState, LinearBasicUser, LinearProject, \
     LinearTeam, LinearPriority, LinearIssueInput, LinearAttachmentInput
 from linear_api.get_resources import team_name_to_id, state_name_to_id, project_name_to_id
 
@@ -191,7 +191,7 @@ def get_linear_issue(issue_id: str) -> LinearIssue:
     out["team"] = LinearTeam(**out["team"])
     out["labels"] = labels
     if out["assignee"]:
-        out["assignee"] = LinearUser(**out["assignee"])
+        out["assignee"] = LinearBasicUser(**out["assignee"])
     if out["project"]:
         out["project"] = LinearProject(**out["project"])
     out["priority"] = LinearPriority(out["priority"])

@@ -27,11 +27,22 @@ class LinearLabel(BaseModel):
     color: str
 
 
-class LinearUser(BaseModel):
+class LinearBasicUser(BaseModel):
     id: str
     name: str
     email: str
     displayName: str
+
+
+class LinearUser(BaseModel):
+    id: str
+    name: str
+    displayName: str
+    email: str
+    avatarUrl: Optional[str]
+    createdAt: datetime
+    updatedAt: datetime
+    archivedAt: Optional[datetime] = None
 
 
 class LinearProject(BaseModel):
@@ -92,7 +103,7 @@ class LinearIssue(BaseModel):
     url: str = Field(..., alias="url")
     state: LinearState
     priority: LinearPriority
-    assignee: Optional[LinearUser] = None
+    assignee: Optional[LinearBasicUser] = None
     team: LinearTeam
     project: Optional[LinearProject] = None
     labels: List[LinearLabel] = Field(default_factory=list)
