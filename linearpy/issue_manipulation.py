@@ -5,47 +5,99 @@ from datetime import datetime
 from linearpy.call_linear_api import call_linear_api
 from linearpy.domain import LinearAttachment, LinearIssue, LinearLabel, LinearState, LinearUser, LinearProject, \
     LinearTeam, LinearPriority, LinearIssueCreateInput
-from linearpy.get_teams import team_name_to_id
+from linearpy.get_resources import team_name_to_id, state_name_to_id, project_name_to_id
 
 
 def create_issue(issue: LinearIssueCreateInput):
+    """
+    Create a new issue in Linear using the LinearIssueCreateInput model.
 
-    #TODO: if issue.parentID is not None, set it to none for issue creation,
-    # get the child_id from call_linear_api, then call set_parent_issue
+    If a parentId is provided, the issue will be created first and then linked to its parent.
 
+    Args:
+        issue: The issue data to create
 
-    #TODO: modify create_issue_mutation to only include the fields that are set,
-    # and to correctly handle LinearPriority
+    Returns:
+        The response from the Linear API
 
-    team_id = team_name_to_id(issue.team.name)
+    Raises:
+        ValueError: If teamName, stateName, or projectName doesn't exist
+    """
+    # Store parent ID if it exists, then remove it for initial creation
+    parent_id = None
+    if issue.parentId is not None:
+        parent_id = issue.parentId
+        # We'll set the parent relationship after creating the issue
 
-    # GraphQL mutation to create a parent issue
+    # Convert teamName to teamId
+    team_id = team_name_to_id(issue.teamName)
+
+    # GraphQL mutation to create an issue
     create_issue_mutation = """
     mutation CreateIssue($input: IssueCreateInput!) {
-  issueCreate(input: $input) {
-    issue {
-      id
-      title
+      issueCreate(input: $input) {
+        issue {
+          id
+          title
+        }
+      }
     }
-  }
-}
-"""
+    """
 
-    # Data for the parent issue
+    # Build the input variables dynamically based on what's set in the issue
+    input_vars = {
+        "title": issue.title,
+        "teamId": team_id,
+    }
+
+    # Add optional fields if they are set
+    if issue.description is not None:
+        input_vars["description"] = issue.description
+
+    # Handle priority as an enum value
+    if issue.priority is not None:
+        # Convert enum to its integer value
+        input_vars["priority"] = issue.priority.value
+
+    # Convert stateName to stateId if provided
+    if issue.stateName is not None:
+        state_id = state_name_to_id(issue.stateName, team_id)
+        input_vars["stateId"] = state_id
+
+    if issue.assigneeId is not None:
+        input_vars["assigneeId"] = issue.assigneeId
+
+    # Convert projectName to projectId if provided
+    if issue.projectName is not None:
+        project_id = project_name_to_id(issue.projectName, team_id)
+        input_vars["projectId"] = project_id
+
+    if issue.labelIds is not None and len(issue.labelIds) > 0:
+        input_vars["labelIds"] = issue.labelIds
+
+    if issue.dueDate is not None:
+        # Format datetime as ISO string
+        input_vars["dueDate"] = issue.dueDate.isoformat()
+
+    # Prepare the GraphQL request
     issue_data = {
         "query": create_issue_mutation,
         "variables": {
-            "input": {
-                "teamId": team_id,  # Replace with your team ID
-                "title": issue.title,
-                "description": issue.description,
-                "priority": issue.priority
-            }
+            "input": input_vars
         }
     }
 
+    # Create the issue
+    response = call_linear_api(issue_data)
 
-    return call_linear_api(issue_data)
+    # If we have a parent ID, set the parent-child relationship
+    if parent_id is not None:
+        child_id = response["issueCreate"]["issue"]["id"]
+        set_parent_response = set_parent_issue(child_id, parent_id)
+        # Merge the responses
+        response["parentRelationship"] = set_parent_response
+
+    return response
 
 
 def set_parent_issue(child_id, parent_id) -> Dict:
@@ -93,7 +145,7 @@ def get_linear_issue(issue_id: str) -> LinearIssue:
             assignee { id name email displayName }
             team { id name key description }
             labels{
-                nodes {  
+                nodes {
                         id
                         name
                         color

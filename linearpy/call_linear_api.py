@@ -16,7 +16,10 @@ def call_linear_api(query: str|Dict[str, Any], api_key: Optional[str] = None) ->
     }
 
     response = requests.post(endpoint, json=query, headers=headers)
+    try:
+        response.raise_for_status()
+    except requests.exceptions.HTTPError as e:
+        raise ValueError(f"Error calling Linear API: {response.status_code}: {response.content}")
 
-    response.raise_for_status()
     return response.json()["data"]
 
