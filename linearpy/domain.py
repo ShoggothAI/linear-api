@@ -71,6 +71,7 @@ class LinearAttachmentInput(BaseModel):
     title: Optional[str] = None
     subtitle: Optional[str] = None
     metadata: Optional[Dict[str, Union[str, int, float]]] = None
+    issueId: str
 
 
 class LinearAttachment(BaseModel):
@@ -84,7 +85,7 @@ class LinearAttachment(BaseModel):
     updatedAt: datetime  # Timestamp when the attachment was last updated
 
 
-class LinearIssueCreateInput(BaseModel):
+class LinearIssueInput(BaseModel):
     """
     Represents the input for creating a new issue in Linear.
     """

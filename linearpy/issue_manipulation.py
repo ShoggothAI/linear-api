@@ -4,13 +4,13 @@ from datetime import datetime
 
 from linearpy.call_linear_api import call_linear_api
 from linearpy.domain import LinearAttachment, LinearIssue, LinearLabel, LinearState, LinearUser, LinearProject, \
-    LinearTeam, LinearPriority, LinearIssueCreateInput
+    LinearTeam, LinearPriority, LinearIssueInput, LinearAttachmentInput
 from linearpy.get_resources import team_name_to_id, state_name_to_id, project_name_to_id
 
 
-def create_issue(issue: LinearIssueCreateInput):
+def create_issue(issue: LinearIssueInput):
     """
-    Create a new issue in Linear using the LinearIssueCreateInput model.
+    Create a new issue in Linear using the LinearIssueInput model.
 
     If a parentId is provided, the issue will be created first and then linked to its parent.
 
@@ -210,7 +210,7 @@ def get_linear_issue(issue_id: str) -> LinearIssue:
 
 
 
-def create_attachment(attachment:LinearAttachment):
+def create_attachment(attachment:LinearAttachmentInput):
     mutation = """
     mutation CreateAttachment($input: AttachmentCreateInput!) {
         attachmentCreate(input: $input) {

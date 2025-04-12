@@ -1,7 +1,7 @@
 import pytest
 from datetime import datetime
 from linearpy.issue_manipulation import create_issue, set_parent_issue, get_linear_issue
-from linearpy.domain import Issue, Team, LinearIssueCreateInput, LinearPriority
+from linearpy.domain import Issue, Team, LinearIssueInput, LinearPriority
 from linearpy.get_resources import team_name_to_id, get_teams
 
 
@@ -14,7 +14,7 @@ def test_team_name():
 @pytest.fixture
 def test_issue_input(test_team_name):
     """Fixture to create a test issue input."""
-    return LinearIssueCreateInput(
+    return LinearIssueInput(
         title="Test Issue from Unit Test",
         teamName=test_team_name,
         description="This is a test issue created by a unit test",
@@ -40,7 +40,7 @@ def test_create_issue(test_issue_input):
 def test_create_issue_with_different_priority(test_team_name):
     """Test creating an issue with a different priority."""
     # Create a test issue with high priority
-    high_priority_issue = LinearIssueCreateInput(
+    high_priority_issue = LinearIssueInput(
         title="High Priority Test Issue",
         teamName=test_team_name,
         description="This is a high priority test issue",
@@ -77,7 +77,7 @@ def test_create_issue_with_state_and_project(test_team_name):
     project_name = next(iter(projects.keys()))
 
     # Create a test issue with state and project
-    issue = LinearIssueCreateInput(
+    issue = LinearIssueInput(
         title="Issue with State and Project",
         teamName=test_team_name,
         description="This issue has a specific state and project",
@@ -102,7 +102,7 @@ def test_create_issue_with_state_and_project(test_team_name):
 def test_create_issue_with_invalid_team():
     """Test creating an issue with an invalid team name."""
     # Create a test issue with an invalid team name
-    invalid_issue = LinearIssueCreateInput(
+    invalid_issue = LinearIssueInput(
         title="Invalid Team Issue",
         teamName="invalid_team_name",  # This name doesn't exist
         description="This issue has an invalid team",
@@ -118,7 +118,7 @@ def test_create_issue_with_invalid_team():
 def test_create_issue_with_invalid_state(test_team_name):
     """Test creating an issue with an invalid state name."""
     # Create a test issue with an invalid state name
-    invalid_issue = LinearIssueCreateInput(
+    invalid_issue = LinearIssueInput(
         title="Invalid State Issue",
         teamName=test_team_name,
         stateName="invalid_state_name",  # This name doesn't exist
@@ -134,7 +134,7 @@ def test_create_issue_with_invalid_state(test_team_name):
 def test_create_issue_with_invalid_project(test_team_name):
     """Test creating an issue with an invalid project name."""
     # Create a test issue with an invalid project name
-    invalid_issue = LinearIssueCreateInput(
+    invalid_issue = LinearIssueInput(
         title="Invalid Project Issue",
         teamName=test_team_name,
         projectName="invalid_project_name",  # This name doesn't exist
@@ -150,7 +150,7 @@ def test_create_issue_with_invalid_project(test_team_name):
 def test_set_parent_issue(test_team_name):
     """Test setting a parent-child relationship between issues."""
     # Create a parent issue
-    parent_issue_input = LinearIssueCreateInput(
+    parent_issue_input = LinearIssueInput(
         title="Parent Issue",
         teamName=test_team_name,
         description="This is a parent issue",
@@ -158,7 +158,7 @@ def test_set_parent_issue(test_team_name):
     )
 
     # Create a child issue
-    child_issue_input = LinearIssueCreateInput(
+    child_issue_input = LinearIssueInput(
         title="Child Issue",
         teamName=test_team_name,
         description="This is a child issue",
@@ -189,7 +189,7 @@ def test_set_parent_issue(test_team_name):
 def test_create_issue_with_parent(test_team_name):
     """Test creating an issue with a parent relationship in one step."""
     # First create a parent issue
-    parent_issue_input = LinearIssueCreateInput(
+    parent_issue_input = LinearIssueInput(
         title="Parent for One-Step Test",
         teamName=test_team_name,
         description="This is a parent issue for testing one-step creation",
@@ -200,7 +200,7 @@ def test_create_issue_with_parent(test_team_name):
     parent_id = parent_response["issueCreate"]["issue"]["id"]
 
     # Now create a child issue with parentId set
-    child_issue_input = LinearIssueCreateInput(
+    child_issue_input = LinearIssueInput(
         title="Child with One-Step Creation",
         teamName=test_team_name,
         description="This child issue should be linked to its parent in one step",
