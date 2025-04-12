@@ -211,7 +211,7 @@ def get_linear_issue(issue_id: str) -> LinearIssue:
 
 def get_team_issues(team_name: str) -> Dict[str, str]:
     """
-    Get all issues for a specific team.
+    Get all issues for a specific team with pagination.
 
     Args:
         team_name: The name of the team to get issues for
@@ -225,25 +225,40 @@ def get_team_issues(team_name: str) -> Dict[str, str]:
     # Convert team name to ID
     team_id = team_name_to_id(team_name)
 
-    # GraphQL query to get all issues for a team
+    # GraphQL query with pagination support
     query = """
-    query GetTeamIssues($teamId: ID!) {
-        issues(filter: { team: { id: { eq: $teamId } } }) {
+    query GetTeamIssues($teamId: ID!, $cursor: String) {
+        issues(filter: { team: { id: { eq: $teamId } } }, first: 50, after: $cursor) {
             nodes {
                 id
                 title
+            }
+            pageInfo {
+                hasNextPage
+                endCursor
             }
         }
     }
     """
 
-    # Call the Linear API
-    response = call_linear_api({"query": query, "variables": {"teamId": team_id}})
-
-    # Create a dictionary mapping issue IDs to titles
+    # Initialize variables for pagination
+    cursor = None
     issues = {}
-    for issue in response["issues"]["nodes"]:
-        issues[issue["id"]] = issue["title"]
+
+    while True:
+        # Call the Linear API with pagination variables
+        response = call_linear_api({"query": query, "variables": {"teamId": team_id, "cursor": cursor}})
+
+        # Extract issues and add them to the dictionary
+        for issue in response["issues"]["nodes"]:
+            issues[issue["id"]] = issue["title"]
+
+        # Check if there are more pages
+        if not response["issues"]["pageInfo"]["hasNextPage"]:
+            break
+
+        # Update cursor for the next page
+        cursor = response["issues"]["pageInfo"]["endCursor"]
 
     return issues
 
