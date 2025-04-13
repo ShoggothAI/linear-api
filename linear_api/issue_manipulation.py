@@ -3,8 +3,18 @@ from typing import Optional, Dict, Any
 from datetime import datetime
 
 from linear_api.call_linear_api import call_linear_api
-from linear_api.domain import LinearAttachment, LinearIssue, LinearLabel, LinearState, LinearBasicUser, LinearProject, \
-    LinearTeam, LinearPriority, LinearIssueInput, LinearAttachmentInput
+from linear_api.domain import (
+    LinearAttachment,
+    LinearIssue,
+    LinearLabel,
+    LinearState,
+    LinearBasicUser,
+    LinearProject,
+    LinearTeam,
+    LinearPriority,
+    LinearIssueInput,
+    LinearAttachmentInput,
+)
 from linear_api.get_resources import team_name_to_id, state_name_to_id, project_name_to_id
 
 
@@ -80,22 +90,27 @@ def create_issue(issue: LinearIssueInput):
         input_vars["dueDate"] = issue.dueDate.isoformat()
 
     # Prepare the GraphQL request
-    issue_data = {
-        "query": create_issue_mutation,
-        "variables": {
-            "input": input_vars
-        }
-    }
+    issue_data = {"query": create_issue_mutation, "variables": {"input": input_vars}}
 
     # Create the issue
     response = call_linear_api(issue_data)
+    new_issue_id = response["issueCreate"]["issue"]["id"]
 
     # If we have a parent ID, set the parent-child relationship
     if parent_id is not None:
-        child_id = response["issueCreate"]["issue"]["id"]
-        set_parent_response = set_parent_issue(child_id, parent_id)
+        set_parent_response = set_parent_issue(new_issue_id, parent_id)
         # Merge the responses
         response["parentRelationship"] = set_parent_response
+
+    if issue.metadata is not None:
+        attachment = LinearAttachmentInput(
+            url=issue.metadata["http://example.com/attachment"],
+            title=issue.metadata.get("metadata_store"),
+            metadata=issue.metadata,
+            issueId=new_issue_id,
+        )
+        attachment_response = create_attachment(attachment)
+        response["attachment"] = attachment_response
 
     return response
 
@@ -118,12 +133,7 @@ def set_parent_issue(child_id, parent_id) -> Dict:
 
     data = {
         "query": link_sub_issue_mutation,
-        "variables": {
-            "id": child_id,
-            "input": {
-                "parentId": parent_id
-            }
-        }
+        "variables": {"id": child_id, "input": {"parentId": parent_id}},
     }
 
     return call_linear_api(data)
@@ -175,7 +185,6 @@ def get_linear_issue(issue_id: str) -> LinearIssue:
         }
     }
     """
-
 
     out = call_linear_api({"query": query, "variables": {"issueId": issue_id}})["issue"]
     attachments = []
@@ -247,7 +256,9 @@ def get_team_issues(team_name: str) -> Dict[str, str]:
 
     while True:
         # Call the Linear API with pagination variables
-        response = call_linear_api({"query": query, "variables": {"teamId": team_id, "cursor": cursor}})
+        response = call_linear_api(
+            {"query": query, "variables": {"teamId": team_id, "cursor": cursor}}
+        )
 
         # Extract issues and add them to the dictionary
         for issue in response["issues"]["nodes"]:
@@ -298,7 +309,7 @@ def delete_issue(issue_id: str) -> Dict[str, Any]:
     return response
 
 
-def create_attachment(attachment:LinearAttachmentInput):
+def create_attachment(attachment: LinearAttachmentInput):
     mutation = """
     mutation CreateAttachment($input: AttachmentCreateInput!) {
         attachmentCreate(input: $input) {
@@ -320,7 +331,7 @@ def create_attachment(attachment:LinearAttachmentInput):
             "url": attachment.url,
             "title": attachment.title,
             "subtitle": attachment.subtitle,
-            "metadata": attachment.metadata
+            "metadata": attachment.metadata,
         }
     }
 
@@ -328,6 +339,7 @@ def create_attachment(attachment:LinearAttachmentInput):
 
     return call_linear_api(query)
 
-if __name__== "__main__":
-    issue = get_linear_issue('4739f616-353c-4782-9e44-935e7b10d0bc')
+
+if __name__ == "__main__":
+    issue = get_linear_issue("4739f616-353c-4782-9e44-935e7b10d0bc")
     print(issue)

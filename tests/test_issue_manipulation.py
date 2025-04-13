@@ -225,3 +225,39 @@ def test_create_issue_with_parent(test_team_name):
 
     # Verify the parent ID matches what we set
     assert response["parentRelationship"]["issueUpdate"]["issue"]["parent"]["id"] == parent_id
+
+
+def test_create_issue_with_metadata(test_team_name):
+    """Test creating an issue with metadata and verifying it can be retrieved."""
+    # Create a test issue with metadata
+    metadata = {
+        "foo": "bar",
+        "http://example.com/attachment": "http://example.com/dummy-attachment",
+        "metadata_store": "metadata_store"
+    }
+    issue_input = LinearIssueInput(
+        title="Issue with Metadata",
+        teamName=test_team_name,
+        description="This issue has metadata attached",
+        priority=LinearPriority.MEDIUM,
+        metadata=metadata
+    )
+
+    # Create the issue
+    response = create_issue(issue_input)
+
+    # Verify the response has the expected structure
+    assert "issueCreate" in response
+    assert "issue" in response["issueCreate"]
+    assert "id" in response["issueCreate"]["issue"]
+
+    # Get the issue ID
+    issue_id = response["issueCreate"]["issue"]["id"]
+
+    # Retrieve the issue to check its metadata
+    retrieved_issue = get_linear_issue(issue_id)
+
+    # Verify the metadata property contains our key-value pair
+    assert retrieved_issue.metadata is not None
+    assert "foo" in retrieved_issue.metadata
+    assert retrieved_issue.metadata["foo"] == "bar"

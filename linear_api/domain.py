@@ -91,6 +91,8 @@ class LinearIssueInput(BaseModel):
     labelIds: Optional[List[str]] = None
     dueDate: Optional[datetime] = None
     parentId: Optional[str] = None
+    # metadata will be auto-converted into an attachment
+    metadata: Optional[Dict[str, Union[str, int, float]]] = None
 
 
 class LinearIssue(BaseModel):
@@ -117,6 +119,16 @@ class LinearIssue(BaseModel):
     branchName: Optional[str] = None
     customerTicketCount: int
     attachments: List[LinearAttachment] = Field(default_factory=list)
+
+    @property
+    def metadata(self) -> Dict[str, Union[str, int, float]]:
+        if self.attachments is not None:
+            metadata_attachments = [a for a in self.attachments if a.title == "metadata_store"]
+            if metadata_attachments:
+                return metadata_attachments[0].metadata or {}
+
+        return {}
+
 
 
 
