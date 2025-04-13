@@ -71,7 +71,9 @@ class LinearAttachment(BaseModel):
     url: str  # URL or resource identifier for the attachment
     title: Optional[str]  # Title of the attachment
     subtitle: Optional[str]  # Subtitle or additional description
-    metadata: Optional[Dict[str, Union[str, int, float]]]  # Key-value metadata (can store JSON payloads)
+    metadata: Optional[
+        Dict[str, Union[str, int, float]]
+    ]  # Key-value metadata (can store JSON payloads)
     issueId: str  # ID of the issue this attachment is associated with
     createdAt: datetime  # Timestamp when the attachment was created
     updatedAt: datetime  # Timestamp when the attachment was last updated
@@ -81,6 +83,7 @@ class LinearIssueInput(BaseModel):
     """
     Represents the input for creating a new issue in Linear.
     """
+
     title: str
     description: Optional[str] = None
     teamName: str
@@ -99,6 +102,7 @@ class LinearIssue(BaseModel):
     """
     Represents a complete issue retrieved from Linear.
     """
+
     id: str
     title: str
     description: Optional[str] = None
@@ -123,13 +127,10 @@ class LinearIssue(BaseModel):
     @property
     def metadata(self) -> Dict[str, Union[str, int, float]]:
         if self.attachments is not None:
-            metadata_attachments = [a for a in self.attachments if a.title == "metadata_store"]
+            metadata_attachments = [
+                a for a in self.attachments if "{" in a.title and "}" in a.title
+            ]
             if metadata_attachments:
                 return metadata_attachments[0].metadata or {}
 
         return {}
-
-
-
-
-

@@ -1,8 +1,12 @@
 import pytest
 
-from linear_api.issue_manipulation import create_issue, set_parent_issue, get_linear_issue
+from linear_api.issue_manipulation import (
+    create_issue,
+    set_parent_issue,
+    get_linear_issue,
+    delete_issue,
+)
 from linear_api.domain import LinearIssueInput, LinearPriority
-
 
 
 @pytest.fixture
@@ -18,7 +22,7 @@ def test_issue_input(test_team_name):
         title="Test Issue from Unit Test",
         teamName=test_team_name,
         description="This is a test issue created by a unit test",
-        priority=LinearPriority.MEDIUM
+        priority=LinearPriority.MEDIUM,
     )
 
 
@@ -44,7 +48,7 @@ def test_create_issue_with_different_priority(test_team_name):
         title="High Priority Test Issue",
         teamName=test_team_name,
         description="This is a high priority test issue",
-        priority=LinearPriority.URGENT  # Urgent priority
+        priority=LinearPriority.URGENT,  # Urgent priority
     )
 
     # Call the function
@@ -83,7 +87,7 @@ def test_create_issue_with_state_and_project(test_team_name):
         description="This issue has a specific state and project",
         stateName=state_name,
         projectName=project_name,
-        priority=LinearPriority.MEDIUM
+        priority=LinearPriority.MEDIUM,
     )
 
     # Call the function
@@ -106,7 +110,7 @@ def test_create_issue_with_invalid_team():
         title="Invalid Team Issue",
         teamName="invalid_team_name",  # This name doesn't exist
         description="This issue has an invalid team",
-        priority=LinearPriority.MEDIUM
+        priority=LinearPriority.MEDIUM,
     )
 
     # The API should return an error when trying to create the issue
@@ -123,7 +127,7 @@ def test_create_issue_with_invalid_state(test_team_name):
         teamName=test_team_name,
         stateName="invalid_state_name",  # This name doesn't exist
         description="This issue has an invalid state",
-        priority=LinearPriority.MEDIUM
+        priority=LinearPriority.MEDIUM,
     )
 
     # This should raise a ValueError specifically
@@ -139,7 +143,7 @@ def test_create_issue_with_invalid_project(test_team_name):
         teamName=test_team_name,
         projectName="invalid_project_name",  # This name doesn't exist
         description="This issue has an invalid project",
-        priority=LinearPriority.MEDIUM
+        priority=LinearPriority.MEDIUM,
     )
 
     # This should raise a ValueError specifically
@@ -154,7 +158,7 @@ def test_set_parent_issue(test_team_name):
         title="Parent Issue",
         teamName=test_team_name,
         description="This is a parent issue",
-        priority=LinearPriority.MEDIUM
+        priority=LinearPriority.MEDIUM,
     )
 
     # Create a child issue
@@ -162,7 +166,7 @@ def test_set_parent_issue(test_team_name):
         title="Child Issue",
         teamName=test_team_name,
         description="This is a child issue",
-        priority=LinearPriority.MEDIUM
+        priority=LinearPriority.MEDIUM,
     )
 
     # Create both issues in Linear
@@ -193,7 +197,7 @@ def test_create_issue_with_parent(test_team_name):
         title="Parent for One-Step Test",
         teamName=test_team_name,
         description="This is a parent issue for testing one-step creation",
-        priority=LinearPriority.MEDIUM
+        priority=LinearPriority.MEDIUM,
     )
 
     parent_response = create_issue(parent_issue_input)
@@ -205,7 +209,7 @@ def test_create_issue_with_parent(test_team_name):
         teamName=test_team_name,
         description="This child issue should be linked to its parent in one step",
         priority=LinearPriority.MEDIUM,
-        parentId=parent_id
+        parentId=parent_id,
     )
 
     # Create the child issue with parent relationship
@@ -232,15 +236,13 @@ def test_create_issue_with_metadata(test_team_name):
     # Create a test issue with metadata
     metadata = {
         "foo": "bar",
-        "http://example.com/attachment": "http://example.com/dummy-attachment",
-        "metadata_store": "metadata_store"
     }
     issue_input = LinearIssueInput(
         title="Issue with Metadata",
         teamName=test_team_name,
         description="This issue has metadata attached",
         priority=LinearPriority.MEDIUM,
-        metadata=metadata
+        metadata=metadata,
     )
 
     # Create the issue
@@ -261,3 +263,6 @@ def test_create_issue_with_metadata(test_team_name):
     assert retrieved_issue.metadata is not None
     assert "foo" in retrieved_issue.metadata
     assert retrieved_issue.metadata["foo"] == "bar"
+
+    # Clean up the issue
+    delete_issue(issue_id)

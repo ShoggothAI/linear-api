@@ -1,4 +1,5 @@
 from typing import Optional, Dict, Any
+import json
 
 from datetime import datetime
 
@@ -104,8 +105,8 @@ def create_issue(issue: LinearIssueInput):
 
     if issue.metadata is not None:
         attachment = LinearAttachmentInput(
-            url=issue.metadata["http://example.com/attachment"],
-            title=issue.metadata.get("metadata_store"),
+            url="http://example.com/metadata",
+            title=json.dumps(issue.metadata),
             metadata=issue.metadata,
             issueId=new_issue_id,
         )
