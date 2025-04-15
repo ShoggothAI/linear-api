@@ -9,7 +9,7 @@ from linear_api.domain import (
     LinearIssue,
     LinearLabel,
     LinearState,
-    LinearBasicUser,
+    LinearUser,
     LinearProject,
     LinearTeam,
     LinearPriority,
@@ -153,7 +153,7 @@ def get_linear_issue(issue_id: str) -> LinearIssue:
             url
             state { id name type color }
             priority
-            assignee { id name email displayName }
+            assignee { id name email displayName avatarUrl createdAt updatedAt archivedAt }
             team { id name key description }
             labels{
                 nodes {
@@ -201,7 +201,7 @@ def get_linear_issue(issue_id: str) -> LinearIssue:
     out["team"] = LinearTeam(**out["team"])
     out["labels"] = labels
     if out["assignee"]:
-        out["assignee"] = LinearBasicUser(**out["assignee"])
+        out["assignee"] = LinearUser(**out["assignee"])
     if out["project"]:
         out["project"] = LinearProject(**out["project"])
     out["priority"] = LinearPriority(out["priority"])
@@ -213,7 +213,7 @@ def get_linear_issue(issue_id: str) -> LinearIssue:
         out["archivedAt"] = datetime.fromisoformat(out["archivedAt"])
     parent = out.pop("parent")
     if parent:
-        out["parentId"] = parent("id")
+        out["parentId"] = parent["id"]
 
     issue = LinearIssue(**out)
     return issue

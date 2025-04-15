@@ -109,7 +109,7 @@ class LinearIssue(BaseModel):
     url: str = Field(..., alias="url")
     state: LinearState
     priority: LinearPriority
-    assignee: Optional[LinearBasicUser] = None
+    assignee: Optional[LinearUser] = None
     team: LinearTeam
     project: Optional[LinearProject] = None
     labels: List[LinearLabel] = Field(default_factory=list)
