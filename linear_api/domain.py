@@ -27,13 +27,6 @@ class LinearLabel(BaseModel):
     color: str
 
 
-class LinearBasicUser(BaseModel):
-    id: str
-    name: str
-    email: str
-    displayName: str
-
-
 class LinearUser(BaseModel):
     id: str
     name: str
