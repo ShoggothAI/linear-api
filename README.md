@@ -1,6 +1,6 @@
 # linear-api
 
-A comprehensive Python wrapper for the Linear API with rich Pydantic models and simplified workflows. 
+A comprehensive Python wrapper for the Linear API with rich Pydantic models and simplified workflows.
 ## Comparison with Other Libraries
 
 
@@ -11,10 +11,11 @@ A comprehensive Python wrapper for the Linear API with rich Pydantic models and 
 - **Metadata Support**: Transparently store and retrieve key-value pairs as attachments to issues
 - **Pagination Handling**: Built-in support for paginated API responses
 - **Type Safety**: Full type hints and validation through Pydantic
+- **Issue Management**: Create, read, update, and delete Linear issues with type-safe models
 
 The set of supported data fields and operations is much richer than in other Python wrappers for Linear API s
 uch as [linear-py](https://gitlab.com/thinkhuman-public/linear-py) and [linear-python](https://github.com/jpbullalayao/linear-python).
- 
+
 
 ## Installation
 
@@ -31,13 +32,15 @@ import os
 from pprint import pprint
 from linear_api import (
     # Import functions
-    get_team_issues, 
-    get_linear_issue, 
+    get_team_issues,
+    get_linear_issue,
     create_issue,
-    
+    update_issue,
+
     # Import domain models
     LinearIssue,
-    LinearIssueInput, 
+    LinearIssueInput,
+    LinearIssueUpdateInput,
     LinearPriority
 )
 
@@ -53,8 +56,8 @@ if team_issues:
     # Get the first issue ID from the list
     first_issue_id = next(iter(team_issues.keys()))
     issue: LinearIssue = get_linear_issue(first_issue_id)
-    
-    
+
+
     # Step 4: Create a sub-issue under the first issue
     sub_issue = LinearIssueInput(
         title=f"Sub-task for {issue.title}",
@@ -69,15 +72,54 @@ if team_issues:
             "importance_score": 7.5
         }
     )
-    
+
     response = create_issue(sub_issue)
-    
+
     # Step 5: Fetch the newly created issue to verify metadata
     new_issue_id = response["issueCreate"]["issue"]["id"]
     new_issue: LinearIssue = get_linear_issue(new_issue_id)
     # Access metadata that was stored as an attachment
     metadata = new_issue.metadata
     # metadata = {'source': 'api_example', 'automated': True, 'importance_score': 7.5}
+
+    # Step 6: Update the issue
+    update_data = LinearIssueUpdateInput(
+        title="Updated title",
+        description="This issue has been updated via the linear-api Python package",
+        priority=LinearPriority.HIGH
+    )
+    update_response = update_issue(new_issue_id, update_data)
+```
+
+### Updating Issues
+
+```python
+from linear_api import get_linear_issue, update_issue, LinearIssueUpdateInput, LinearPriority
+
+# Get an existing issue
+issue_id = "ISSUE-123"  # Replace with your issue ID
+issue = get_linear_issue(issue_id)
+
+# Create an update object with only the fields you want to change
+update_data = LinearIssueUpdateInput(
+    title="Updated Issue Title",
+    description="This issue has been updated with new information",
+    priority=LinearPriority.HIGH
+)
+
+# Update the issue
+response = update_issue(issue_id, update_data)
+
+# Verify the update was successful
+if response["issueUpdate"]["success"]:
+    print(f"Issue {issue_id} updated successfully")
+
+# You can also update state and project using names instead of IDs
+state_update = LinearIssueUpdateInput(
+    stateName="In Progress",  # Will be converted to stateId automatically
+    projectName="Q3 Goals"    # Will be converted to projectId automatically
+)
+update_issue(issue_id, state_update)
 ```
 
 ### Working with Users

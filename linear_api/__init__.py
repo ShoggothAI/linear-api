@@ -3,6 +3,7 @@ __version__ = "0.1.0"
 # Domain models
 from .domain import (
     LinearIssueInput,
+    LinearIssueUpdateInput,
     LinearPriority,
     LinearAttachmentInput,
     LinearIssue,
@@ -20,7 +21,8 @@ from .issue_manipulation import (
     get_linear_issue,
     get_team_issues,
     delete_issue,
-    create_attachment
+    create_attachment,
+    update_issue
 )
 
 # User-related functions

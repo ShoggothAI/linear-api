@@ -91,6 +91,27 @@ class LinearIssueInput(BaseModel):
     metadata: Optional[Dict[str, Union[str, int, float]]] = None
 
 
+class LinearIssueUpdateInput(BaseModel):
+    """
+    Represents the input for updating an existing issue in Linear.
+    All fields are optional since you only need to specify the fields you want to update.
+    """
+
+    title: Optional[str] = None
+    description: Optional[str] = None
+    teamName: Optional[str] = None
+    priority: Optional[LinearPriority] = None
+    stateName: Optional[str] = None
+    assigneeId: Optional[str] = None
+    projectName: Optional[str] = None
+    labelIds: Optional[List[str]] = None
+    dueDate: Optional[datetime] = None
+    parentId: Optional[str] = None
+    estimate: Optional[int] = None
+    # metadata will be auto-converted into an attachment
+    metadata: Optional[Dict[str, Union[str, int, float]]] = None
+
+
 class LinearIssue(BaseModel):
     """
     Represents a complete issue retrieved from Linear.

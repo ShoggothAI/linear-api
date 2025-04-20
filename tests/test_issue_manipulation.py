@@ -5,8 +5,9 @@ from linear_api.issue_manipulation import (
     set_parent_issue,
     get_linear_issue,
     delete_issue,
+    update_issue,
 )
-from linear_api.domain import LinearIssueInput, LinearPriority
+from linear_api.domain import LinearIssueInput, LinearIssueUpdateInput, LinearPriority
 
 
 @pytest.fixture
@@ -263,6 +264,109 @@ def test_create_issue_with_metadata(test_team_name):
     assert retrieved_issue.metadata is not None
     assert "foo" in retrieved_issue.metadata
     assert retrieved_issue.metadata["foo"] == "bar"
+
+    # Clean up the issue
+    delete_issue(issue_id)
+
+
+def test_update_issue(test_team_name):
+    """Test updating an existing issue."""
+    # First create an issue to update
+    issue_input = LinearIssueInput(
+        title="Issue to Update",
+        teamName=test_team_name,
+        description="This issue will be updated",
+        priority=LinearPriority.MEDIUM,
+    )
+
+    # Create the issue
+    response = create_issue(issue_input)
+    issue_id = response["issueCreate"]["issue"]["id"]
+
+    # Update the issue with new values
+    update_data = LinearIssueUpdateInput(
+        title="Updated Issue Title",
+        description="This issue has been updated",
+        priority=LinearPriority.HIGH,
+    )
+
+    # Call the update function
+    update_response = update_issue(issue_id, update_data)
+
+    # Verify the response has the expected structure
+    assert "issueUpdate" in update_response
+    assert "success" in update_response["issueUpdate"]
+    assert update_response["issueUpdate"]["success"] is True
+    assert "issue" in update_response["issueUpdate"]
+
+    # Verify the updated values
+    updated_issue = update_response["issueUpdate"]["issue"]
+    assert updated_issue["title"] == update_data.title
+    assert updated_issue["description"] == update_data.description
+    assert updated_issue["priority"] == update_data.priority.value
+
+    # Retrieve the issue to double-check the updates
+    retrieved_issue = get_linear_issue(issue_id)
+    assert retrieved_issue.title == update_data.title
+    assert retrieved_issue.description == update_data.description
+    assert retrieved_issue.priority == update_data.priority
+
+    # Clean up the issue
+    delete_issue(issue_id)
+
+
+def test_update_issue_with_state_and_project(test_team_name):
+    """Test updating an issue with state and project names."""
+    # Get the first available state and project for the team
+    from linear_api.get_resources import get_states, get_projects, team_name_to_id
+
+    team_id = team_name_to_id(test_team_name)
+    states = get_states(team_id)
+    projects = get_projects(team_id)
+
+    # Skip test if no states or projects are available
+    if not states or not projects:
+        pytest.skip("No states or projects available for testing")
+
+    # Get two different states and projects if possible
+    state_names = list(states.keys())
+    project_names = list(projects.keys())
+
+    if len(state_names) < 2 or len(project_names) < 2:
+        pytest.skip("Need at least two states and two projects for this test")
+
+    # Create an issue with the first state and project
+    issue_input = LinearIssueInput(
+        title="Issue with State and Project to Update",
+        teamName=test_team_name,
+        stateName=state_names[0],
+        projectName=project_names[0],
+    )
+
+    # Create the issue
+    response = create_issue(issue_input)
+    issue_id = response["issueCreate"]["issue"]["id"]
+
+    # Update the issue with the second state and project
+    update_data = LinearIssueUpdateInput(
+        stateName=state_names[1],
+        projectName=project_names[1],
+    )
+
+    # Call the update function
+    update_response = update_issue(issue_id, update_data)
+
+    # Verify the response has the expected structure
+    assert "issueUpdate" in update_response
+    assert "success" in update_response["issueUpdate"]
+    assert update_response["issueUpdate"]["success"] is True
+
+    # Retrieve the issue to check the updates
+    retrieved_issue = get_linear_issue(issue_id)
+
+    # Verify the state and project were updated
+    assert retrieved_issue.state.name == state_names[1]
+    assert retrieved_issue.project.name == project_names[1]
 
     # Clean up the issue
     delete_issue(issue_id)
