@@ -41,6 +41,10 @@ def test_create_issue(test_issue_input):
     # Verify the title matches what we sent
     assert response["issueCreate"]["issue"]["title"] == test_issue_input.title
 
+    # Clean up the issue
+    issue_id = response["issueCreate"]["issue"]["id"]
+    delete_issue(issue_id)
+
 
 def test_create_issue_with_different_priority(test_team_name):
     """Test creating an issue with a different priority."""
@@ -63,6 +67,10 @@ def test_create_issue_with_different_priority(test_team_name):
 
     # Verify the title matches what we sent
     assert response["issueCreate"]["issue"]["title"] == high_priority_issue.title
+
+    # Clean up the issue
+    issue_id = response["issueCreate"]["issue"]["id"]
+    delete_issue(issue_id)
 
 
 def test_create_issue_with_state_and_project(test_team_name):
@@ -102,6 +110,10 @@ def test_create_issue_with_state_and_project(test_team_name):
 
     # Verify the title matches what we sent
     assert response["issueCreate"]["issue"]["title"] == issue.title
+
+    # Clean up the issue
+    issue_id = response["issueCreate"]["issue"]["id"]
+    delete_issue(issue_id)
 
 
 def test_create_issue_with_invalid_team():
@@ -190,6 +202,10 @@ def test_set_parent_issue(test_team_name):
     # Verify the parent ID matches what we set
     assert response["issueUpdate"]["issue"]["parent"]["id"] == parent_id
 
+    # Clean up the issues
+    delete_issue(child_id)
+    delete_issue(parent_id)
+
 
 def test_create_issue_with_parent(test_team_name):
     """Test creating an issue with a parent relationship in one step."""
@@ -230,6 +246,11 @@ def test_create_issue_with_parent(test_team_name):
 
     # Verify the parent ID matches what we set
     assert response["parentRelationship"]["issueUpdate"]["issue"]["parent"]["id"] == parent_id
+
+    # Clean up the issues
+    child_id = response["issueCreate"]["issue"]["id"]
+    delete_issue(child_id)
+    delete_issue(parent_id)
 
 
 def test_create_issue_with_metadata(test_team_name):

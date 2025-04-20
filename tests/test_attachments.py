@@ -26,7 +26,15 @@ def test_issue(test_team_name):
     issue_id = response["issueCreate"]["issue"]["id"]
 
     # Return the issue ID for use in tests
-    return issue_id
+    yield issue_id
+
+    # Clean up after the test by deleting the issue
+    from linear_api.issue_manipulation import delete_issue
+    try:
+        delete_issue(issue_id)
+    except ValueError:
+        # Issue might have already been deleted in the test
+        pass
 
 
 def test_create_and_get_attachment(test_issue):

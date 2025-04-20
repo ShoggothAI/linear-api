@@ -91,6 +91,9 @@ def create_issue(issue: LinearIssueInput):
         # Format datetime as ISO string
         input_vars["dueDate"] = issue.dueDate.isoformat()
 
+    if issue.estimate is not None:
+        input_vars["estimate"] = issue.estimate
+
     # Prepare the GraphQL request
     issue_data = {"query": create_issue_mutation, "variables": {"input": input_vars}}
 

@@ -87,6 +87,7 @@ class LinearIssueInput(BaseModel):
     labelIds: Optional[List[str]] = None
     dueDate: Optional[datetime] = None
     parentId: Optional[str] = None
+    estimate: Optional[int] = None
     # metadata will be auto-converted into an attachment
     metadata: Optional[Dict[str, Union[str, int, float]]] = None
 
