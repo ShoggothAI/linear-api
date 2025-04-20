@@ -1,8 +1,6 @@
 # linear-api
 
 A comprehensive Python wrapper for the Linear API with rich Pydantic models and simplified workflows.
-## Comparison with Other Libraries
-
 
 ## Features
 
@@ -137,6 +135,34 @@ user = fetch_linear_user(first_user_id, api_key=None)  # Uses env var LINEAR_API
 
 user_display_name = user.displayName
 user_email = user.email
+```
+
+### Managing Projects
+
+```python
+from linear_api import create_project, get_project, delete_project
+
+# Create a new project in a team
+team_name = "Engineering"
+project_name = "Q4 Roadmap"
+response = create_project(
+    name=project_name,
+    team_name=team_name,
+    description="Our Q4 development roadmap and milestones"
+)
+
+# Get the project ID from the response
+project_id = response["projectCreate"]["project"]["id"]
+
+# Fetch a project by ID
+project = get_project(project_id)
+print(f"Project name: {project.name}")
+print(f"Project description: {project.description}")
+
+# Delete a project
+delete_response = delete_project(project_id)
+if delete_response["projectDelete"]["success"]:
+    print(f"Project '{project_name}' deleted successfully")
 ```
 
 ## Authentication
