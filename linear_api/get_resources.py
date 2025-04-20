@@ -1,11 +1,12 @@
 from enum import StrEnum
-from functools import lru_cache
-from typing import Dict, List, Optional, Callable, Any, Tuple
+from typing import Dict, Optional, Any, Tuple
 
 from linear_api.call_linear_api import call_linear_api
 
+
 class LinearResourceType(StrEnum):
     """Enum representing different types of Linear resources."""
+
     TEAM = "team"
     STATE = "state"
     PROJECT = "project"
@@ -15,7 +16,9 @@ class LinearResourceType(StrEnum):
 _cache: Dict[Tuple[LinearResourceType, Optional[str]], Dict[str, str]] = {}
 
 
-def _get_query_for_resource(resource_type: LinearResourceType, team_id: Optional[str] = None) -> Dict[str, Any]:
+def _get_query_for_resource(
+    resource_type: LinearResourceType, team_id: Optional[str] = None
+) -> Dict[str, Any]:
     """Get the appropriate GraphQL query for a resource type."""
     if resource_type == LinearResourceType.TEAM:
         query = """
@@ -107,7 +110,7 @@ def _get_resource_data_key(resource_type: LinearResourceType) -> str:
     resource_keys = {
         LinearResourceType.TEAM: "teams",
         LinearResourceType.STATE: "workflowStates",
-        LinearResourceType.PROJECT: "projects"
+        LinearResourceType.PROJECT: "projects",
     }
 
     if resource_type in resource_keys:
@@ -122,7 +125,7 @@ def _get_resource_name(resource_type: LinearResourceType) -> str:
     resource_names = {
         LinearResourceType.TEAM: "Team",
         LinearResourceType.STATE: "State",
-        LinearResourceType.PROJECT: "Project"
+        LinearResourceType.PROJECT: "Project",
     }
 
     if resource_type in resource_names:
@@ -131,7 +134,9 @@ def _get_resource_name(resource_type: LinearResourceType) -> str:
     raise ValueError(f"Unknown resource type: {resource_type}")
 
 
-def get_resources(resource_type: LinearResourceType, team_id: Optional[str] = None) -> Dict[str, str]:
+def get_resources(
+    resource_type: LinearResourceType, team_id: Optional[str] = None
+) -> Dict[str, str]:
     """
     Fetch resources from Linear API.
 
@@ -157,10 +162,12 @@ def get_resources(resource_type: LinearResourceType, team_id: Optional[str] = No
     resources = data[resource_key]["nodes"]
 
     # Return a dictionary mapping names to IDs
-    return {resource['name']: resource['id'] for resource in resources}
+    return {resource["name"]: resource["id"] for resource in resources}
 
 
-def resource_name_to_id(resource_type: LinearResourceType, name: str, team_id: Optional[str] = None) -> str:
+def resource_name_to_id(
+    resource_type: LinearResourceType, name: str, team_id: Optional[str] = None
+) -> str:
     """
     Convert a resource name to its ID.
 
@@ -202,6 +209,7 @@ def resource_name_to_id(resource_type: LinearResourceType, name: str, team_id: O
 
 
 # Convenience functions for backward compatibility
+
 
 def get_teams() -> Dict[str, str]:
     """Get all teams from Linear API."""

@@ -1,6 +1,6 @@
 import pytest
 from datetime import datetime
-from linear_api.issue_manipulation import create_issue, create_attachment, get_linear_issue
+from linear_api.issue_manipulation import create_issue, create_attachment, get_linear_issue, delete_issue
 from linear_api.domain import LinearIssueInput, LinearPriority, LinearAttachment, LinearAttachmentInput
 from linear_api.get_resources import team_name_to_id
 
@@ -29,7 +29,6 @@ def test_issue(test_team_name):
     yield issue_id
 
     # Clean up after the test by deleting the issue
-    from linear_api.issue_manipulation import delete_issue
     try:
         delete_issue(issue_id)
     except ValueError:

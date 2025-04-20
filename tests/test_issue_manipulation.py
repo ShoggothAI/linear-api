@@ -1,4 +1,5 @@
 import pytest
+import time
 
 from linear_api.issue_manipulation import (
     create_issue,
@@ -8,6 +9,8 @@ from linear_api.issue_manipulation import (
     update_issue,
 )
 from linear_api.domain import LinearIssueInput, LinearIssueUpdateInput, LinearPriority
+from linear_api.get_resources import get_states, team_name_to_id
+from linear_api.project_manipulation import create_project, delete_project
 
 
 @pytest.fixture
@@ -75,19 +78,25 @@ def test_create_issue_with_different_priority(test_team_name):
 
 def test_create_issue_with_state_and_project(test_team_name):
     """Test creating an issue with state and project names."""
-    # Get the first available state and project for the team
-    from linear_api.get_resources import get_states, get_projects, team_name_to_id
+    # Get the first available state for the team
 
     team_id = team_name_to_id(test_team_name)
     states = get_states(team_id)
-    projects = get_projects(team_id)
 
-    # Skip test if no states or projects are available
-    if not states or not projects:
-        pytest.skip("No states or projects available for testing")
+    # Skip test if no states are available
+    if not states:
+        pytest.skip("No states available for testing")
+
+    # Create a test project
+    project_name = f"Test Project {int(time.time())}"
+    project_response = create_project(
+        name=project_name,
+        team_name=test_team_name,
+        description="Test project for issue creation"
+    )
+    project_id = project_response["projectCreate"]["project"]["id"]
 
     state_name = next(iter(states.keys()))
-    project_name = next(iter(projects.keys()))
 
     # Create a test issue with state and project
     issue = LinearIssueInput(
@@ -111,9 +120,10 @@ def test_create_issue_with_state_and_project(test_team_name):
     # Verify the title matches what we sent
     assert response["issueCreate"]["issue"]["title"] == issue.title
 
-    # Clean up the issue
+    # Clean up - delete the issue and project
     issue_id = response["issueCreate"]["issue"]["id"]
     delete_issue(issue_id)
+    delete_project(project_id)
 
 
 def test_create_issue_with_invalid_team():
@@ -338,30 +348,44 @@ def test_update_issue(test_team_name):
 
 def test_update_issue_with_state_and_project(test_team_name):
     """Test updating an issue with state and project names."""
-    # Get the first available state and project for the team
-    from linear_api.get_resources import get_states, get_projects, team_name_to_id
+    # Get the first available state for the team
 
     team_id = team_name_to_id(test_team_name)
     states = get_states(team_id)
-    projects = get_projects(team_id)
 
-    # Skip test if no states or projects are available
-    if not states or not projects:
-        pytest.skip("No states or projects available for testing")
+    # Skip test if no states are available
+    if not states:
+        pytest.skip("No states available for testing")
 
-    # Get two different states and projects if possible
+    # Get two different states if possible
     state_names = list(states.keys())
-    project_names = list(projects.keys())
 
-    if len(state_names) < 2 or len(project_names) < 2:
-        pytest.skip("Need at least two states and two projects for this test")
+    if len(state_names) < 2:
+        pytest.skip("Need at least two states for this test")
+
+    # Create two test projects
+    project1_name = f"Test Project 1 {int(time.time())}"
+    project1_response = create_project(
+        name=project1_name,
+        team_name=test_team_name,
+        description="First test project for issue update"
+    )
+    project1_id = project1_response["projectCreate"]["project"]["id"]
+
+    project2_name = f"Test Project 2 {int(time.time())}"
+    project2_response = create_project(
+        name=project2_name,
+        team_name=test_team_name,
+        description="Second test project for issue update"
+    )
+    project2_id = project2_response["projectCreate"]["project"]["id"]
 
     # Create an issue with the first state and project
     issue_input = LinearIssueInput(
         title="Issue with State and Project to Update",
         teamName=test_team_name,
         stateName=state_names[0],
-        projectName=project_names[0],
+        projectName=project1_name,
     )
 
     # Create the issue
@@ -371,7 +395,7 @@ def test_update_issue_with_state_and_project(test_team_name):
     # Update the issue with the second state and project
     update_data = LinearIssueUpdateInput(
         stateName=state_names[1],
-        projectName=project_names[1],
+        projectName=project2_name,
     )
 
     # Call the update function
@@ -387,7 +411,9 @@ def test_update_issue_with_state_and_project(test_team_name):
 
     # Verify the state and project were updated
     assert retrieved_issue.state.name == state_names[1]
-    assert retrieved_issue.project.name == project_names[1]
+    assert retrieved_issue.project.name == project2_name
 
-    # Clean up the issue
+    # Clean up the issue and projects
     delete_issue(issue_id)
+    delete_project(project1_id)
+    delete_project(project2_id)

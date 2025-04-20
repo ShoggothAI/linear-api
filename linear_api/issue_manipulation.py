@@ -17,7 +17,8 @@ from linear_api.domain import (
     LinearIssueUpdateInput,
     LinearAttachmentInput,
 )
-from linear_api.get_resources import team_name_to_id, state_name_to_id, project_name_to_id
+from linear_api.get_resources import team_name_to_id, state_name_to_id
+from linear_api.project_manipulation import project_name_to_id
 
 
 def create_issue(issue: LinearIssueInput):
@@ -431,10 +432,7 @@ def update_issue(issue_id: str, update_data: LinearIssueUpdateInput) -> Dict[str
     input_vars.update(update_dict)
 
     # Prepare the GraphQL request
-    data = {
-        "query": update_issue_mutation,
-        "variables": {"id": issue_id, "input": input_vars}
-    }
+    data = {"query": update_issue_mutation, "variables": {"id": issue_id, "input": input_vars}}
 
     # Call the Linear API
     response = call_linear_api(data)
