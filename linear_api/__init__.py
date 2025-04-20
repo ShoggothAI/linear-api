@@ -3,6 +3,7 @@ __version__ = "0.1.0"
 # Domain models
 from .domain import (
     LinearIssueInput,
+    LinearIssueUpdateInput,
     LinearPriority,
     LinearAttachmentInput,
     LinearIssue,
@@ -11,7 +12,7 @@ from .domain import (
     LinearLabel,
     LinearProject,
     LinearTeam,
-    LinearAttachment
+    LinearAttachment,
 )
 
 # Issue manipulation functions
@@ -20,20 +21,15 @@ from .issue_manipulation import (
     get_linear_issue,
     get_team_issues,
     delete_issue,
-    create_attachment
+    create_attachment,
+    update_issue,
 )
 
 # User-related functions
-from .get_user import (
-    fetch_linear_user,
-    get_user_email_map
-)
+from .get_user import fetch_linear_user, get_user_email_map
 
 # Resource-related functions
-from .get_resources import (
-    get_resources,
-    resource_name_to_id,
-    team_name_to_id,
-    state_name_to_id,
-    project_name_to_id
-)
+from .get_resources import get_resources, resource_name_to_id, team_name_to_id, state_name_to_id
+
+# Project manipulation functions
+from .project_manipulation import create_project, delete_project, get_project, project_name_to_id

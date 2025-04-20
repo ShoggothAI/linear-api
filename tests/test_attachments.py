@@ -1,6 +1,6 @@
 import pytest
 from datetime import datetime
-from linear_api.issue_manipulation import create_issue, create_attachment, get_linear_issue
+from linear_api.issue_manipulation import create_issue, create_attachment, get_linear_issue, delete_issue
 from linear_api.domain import LinearIssueInput, LinearPriority, LinearAttachment, LinearAttachmentInput
 from linear_api.get_resources import team_name_to_id
 
@@ -26,7 +26,14 @@ def test_issue(test_team_name):
     issue_id = response["issueCreate"]["issue"]["id"]
 
     # Return the issue ID for use in tests
-    return issue_id
+    yield issue_id
+
+    # Clean up after the test by deleting the issue
+    try:
+        delete_issue(issue_id)
+    except ValueError:
+        # Issue might have already been deleted in the test
+        pass
 
 
 def test_create_and_get_attachment(test_issue):
