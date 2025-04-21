@@ -393,12 +393,8 @@ def update_issue(issue_id: str, update_data: LinearIssueUpdateInput) -> Dict[str
     # Build the input variables based on what's provided in update_data
     input_vars = {}
 
-    # Handle fields that need conversion
-    if "teamName" in update_dict:
-        team_id = team_name_to_id(update_dict.pop("teamName"))
-        input_vars["teamId"] = team_id
-
-        # If stateName or projectName is provided, we need the team_id for conversion
+    # Helper function to handle name conversions
+    def _handle_name_conversions(update_dict, team_id, input_vars):
         if "stateName" in update_dict:
             state_id = state_name_to_id(update_dict.pop("stateName"), team_id)
             input_vars["stateId"] = state_id
@@ -406,19 +402,20 @@ def update_issue(issue_id: str, update_data: LinearIssueUpdateInput) -> Dict[str
         if "projectName" in update_dict:
             project_id = project_name_to_id(update_dict.pop("projectName"), team_id)
             input_vars["projectId"] = project_id
-    else:
+
+    # Handle fields that need conversion
+    team_id = None
+    if "teamName" in update_dict:
+        team_id = team_name_to_id(update_dict.pop("teamName"))
+        input_vars["teamId"] = team_id
+    elif "stateName" in update_dict or "projectName" in update_dict:
         # If teamName is not provided but stateName or projectName is, we need to get the issue first
-        if "stateName" in update_dict or "projectName" in update_dict:
-            issue = get_linear_issue(issue_id)
-            team_id = issue.team.id
+        issue = get_linear_issue(issue_id)
+        team_id = issue.team.id
 
-            if "stateName" in update_dict:
-                state_id = state_name_to_id(update_dict.pop("stateName"), team_id)
-                input_vars["stateId"] = state_id
-
-            if "projectName" in update_dict:
-                project_id = project_name_to_id(update_dict.pop("projectName"), team_id)
-                input_vars["projectId"] = project_id
+    # Handle stateName and projectName conversions if we have a team_id
+    if team_id is not None:
+        _handle_name_conversions(update_dict, team_id, input_vars)
 
     # Handle priority as an enum value
     if "priority" in update_dict and isinstance(update_dict["priority"], LinearPriority):
