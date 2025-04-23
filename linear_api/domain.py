@@ -14,6 +14,13 @@ class LinearPriority(Enum):
     NONE = 4
 
 
+class SLADayCountType(StrEnum):
+    """Enum for SLA day count types"""
+
+    ALL = "all"
+    ONLY_BUSINESS_DAYS = "onlyBusinessDays"
+
+
 class LinearState(BaseModel):
     id: str
     name: str
@@ -77,9 +84,12 @@ class LinearIssueInput(BaseModel):
     Represents the input for creating a new issue in Linear.
     """
 
+    # Required fields
     title: str
-    description: Optional[str] = None
     teamName: str
+
+    # Common optional fields
+    description: Optional[str] = None
     priority: LinearPriority = LinearPriority.MEDIUM
     stateName: Optional[str] = None
     assigneeId: Optional[str] = None
@@ -88,6 +98,22 @@ class LinearIssueInput(BaseModel):
     dueDate: Optional[datetime] = None
     parentId: Optional[str] = None
     estimate: Optional[int] = None
+    descriptionData: Optional[Dict[str, Any]] = None
+    subscriberIds: Optional[List[str]] = None
+    cycleName: Optional[str] = None  # Will be converted to cycleId
+    projectMilestoneName: Optional[str] = None  # Will be converted to projectMilestoneId
+    templateName: Optional[str] = None  # Will be converted to templateId
+    sortOrder: Optional[float] = None
+    prioritySortOrder: Optional[float] = None
+    subIssueSortOrder: Optional[float] = None
+    displayIconUrl: Optional[str] = None
+    preserveSortOrderOnCreate: Optional[bool] = None
+    createdAt: Optional[datetime] = None
+    slaBreachesAt: Optional[datetime] = None
+    slaStartedAt: Optional[datetime] = None
+    slaType: Optional[SLADayCountType] = None
+    completedAt: Optional[datetime] = None
+
     # metadata will be auto-converted into an attachment
     metadata: Optional[Dict[str, Union[str, int, float]]] = None
 
@@ -98,6 +124,7 @@ class LinearIssueUpdateInput(BaseModel):
     All fields are optional since you only need to specify the fields you want to update.
     """
 
+    # Common fields
     title: Optional[str] = None
     description: Optional[str] = None
     teamName: Optional[str] = None
@@ -109,6 +136,24 @@ class LinearIssueUpdateInput(BaseModel):
     dueDate: Optional[datetime] = None
     parentId: Optional[str] = None
     estimate: Optional[int] = None
+    descriptionData: Optional[Dict[str, Any]] = None
+    subscriberIds: Optional[List[str]] = None
+    addedLabelIds: Optional[List[str]] = None
+    removedLabelIds: Optional[List[str]] = None
+    cycleName: Optional[str] = None  # Will be converted to cycleId
+    projectMilestoneName: Optional[str] = None  # Will be converted to projectMilestoneId
+    templateName: Optional[str] = None  # Will be converted to templateId
+    sortOrder: Optional[float] = None
+    prioritySortOrder: Optional[float] = None
+    subIssueSortOrder: Optional[float] = None
+    trashed: Optional[bool] = None
+    slaBreachesAt: Optional[datetime] = None
+    slaStartedAt: Optional[datetime] = None
+    snoozedUntilAt: Optional[datetime] = None
+    snoozedById: Optional[str] = None
+    slaType: Optional[SLADayCountType] = None
+    autoClosedByParentClosing: Optional[bool] = None
+
     # metadata will be auto-converted into an attachment
     metadata: Optional[Dict[str, Union[str, int, float]]] = None
 

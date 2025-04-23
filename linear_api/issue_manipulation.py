@@ -17,6 +17,7 @@ from linear_api.domain import (
     LinearIssueUpdateInput,
     LinearAttachmentInput,
     IntegrationService,
+    SLADayCountType,
     ActorBot,
     Favorite,
     Comment,
@@ -103,6 +104,61 @@ def create_issue(issue: LinearIssueInput):
 
     if issue.estimate is not None:
         input_vars["estimate"] = issue.estimate
+
+    # Handle additional fields
+    if issue.descriptionData is not None:
+        input_vars["descriptionData"] = issue.descriptionData
+
+    if issue.subscriberIds is not None and len(issue.subscriberIds) > 0:
+        input_vars["subscriberIds"] = issue.subscriberIds
+
+    # Convert cycleName to cycleId if provided
+    if issue.cycleName is not None:
+        from linear_api.get_resources import resource_name_to_id, LinearResourceType
+        cycle_id = resource_name_to_id(issue.cycleName, LinearResourceType.CYCLES, team_id)
+        input_vars["cycleId"] = cycle_id
+
+    # Convert projectMilestoneName to projectMilestoneId if provided
+    if issue.projectMilestoneName is not None and issue.projectName is not None:
+        from linear_api.get_resources import resource_name_to_id, LinearResourceType
+        milestone_id = resource_name_to_id(issue.projectMilestoneName, LinearResourceType.PROJECT_MILESTONES, team_id)
+        input_vars["projectMilestoneId"] = milestone_id
+
+    # Convert templateName to templateId if provided
+    if issue.templateName is not None:
+        from linear_api.get_resources import resource_name_to_id, LinearResourceType
+        template_id = resource_name_to_id(issue.templateName, LinearResourceType.TEMPLATES, team_id)
+        input_vars["templateId"] = template_id
+
+    if issue.sortOrder is not None:
+        input_vars["sortOrder"] = issue.sortOrder
+
+    if issue.prioritySortOrder is not None:
+        input_vars["prioritySortOrder"] = issue.prioritySortOrder
+
+    if issue.subIssueSortOrder is not None:
+        input_vars["subIssueSortOrder"] = issue.subIssueSortOrder
+
+    if issue.displayIconUrl is not None:
+        input_vars["displayIconUrl"] = issue.displayIconUrl
+
+    if issue.preserveSortOrderOnCreate is not None:
+        input_vars["preserveSortOrderOnCreate"] = issue.preserveSortOrderOnCreate
+
+    if issue.createdAt is not None:
+        input_vars["createdAt"] = issue.createdAt.isoformat()
+
+    if issue.slaBreachesAt is not None:
+        input_vars["slaBreachesAt"] = issue.slaBreachesAt.isoformat()
+
+    if issue.slaStartedAt is not None:
+        input_vars["slaStartedAt"] = issue.slaStartedAt.isoformat()
+
+    if issue.slaType is not None:
+        input_vars["slaType"] = issue.slaType.value
+
+    if issue.completedAt is not None:
+        input_vars["completedAt"] = issue.completedAt.isoformat()
 
     # Prepare the GraphQL request
     issue_data = {"query": create_issue_mutation, "variables": {"input": input_vars}}
@@ -554,8 +610,8 @@ def update_issue(issue_id: str, update_data: LinearIssueUpdateInput) -> Dict[str
     if "teamName" in update_dict:
         team_id = team_name_to_id(update_dict.pop("teamName"))
         input_vars["teamId"] = team_id
-    elif "stateName" in update_dict or "projectName" in update_dict:
-        # If teamName is not provided but stateName or projectName is, we need to get the issue first
+    elif "stateName" in update_dict or "projectName" in update_dict or "cycleName" in update_dict or "projectMilestoneName" in update_dict or "templateName" in update_dict:
+        # If teamName is not provided but other name fields are, we need to get the issue first
         issue = get_linear_issue(issue_id)
         team_id = issue.team.id
 
@@ -567,9 +623,34 @@ def update_issue(issue_id: str, update_data: LinearIssueUpdateInput) -> Dict[str
     if "priority" in update_dict and isinstance(update_dict["priority"], LinearPriority):
         input_vars["priority"] = update_dict.pop("priority").value
 
-    # Handle dueDate as ISO string
-    if "dueDate" in update_dict and isinstance(update_dict["dueDate"], datetime):
-        input_vars["dueDate"] = update_dict.pop("dueDate").isoformat()
+    # Handle datetime fields as ISO strings
+    datetime_fields = ["dueDate", "createdAt", "slaBreachesAt", "slaStartedAt", "snoozedUntilAt", "completedAt"]
+    for field in datetime_fields:
+        if field in update_dict and isinstance(update_dict[field], datetime):
+            input_vars[field] = update_dict.pop(field).isoformat()
+
+    # Handle SLADayCountType enum
+    if "slaType" in update_dict and isinstance(update_dict["slaType"], SLADayCountType):
+        input_vars["slaType"] = update_dict.pop("slaType").value
+
+    # Handle additional name-to-id conversions
+    if team_id is not None:
+        from linear_api.get_resources import resource_name_to_id, LinearResourceType
+
+        # Convert cycleName to cycleId if provided
+        if "cycleName" in update_dict:
+            cycle_id = resource_name_to_id(update_dict.pop("cycleName"), LinearResourceType.CYCLES, team_id)
+            input_vars["cycleId"] = cycle_id
+
+        # Convert projectMilestoneName to projectMilestoneId if provided
+        if "projectMilestoneName" in update_dict:
+            milestone_id = resource_name_to_id(update_dict.pop("projectMilestoneName"), LinearResourceType.PROJECT_MILESTONES, team_id)
+            input_vars["projectMilestoneId"] = milestone_id
+
+        # Convert templateName to templateId if provided
+        if "templateName" in update_dict:
+            template_id = resource_name_to_id(update_dict.pop("templateName"), LinearResourceType.TEMPLATES, team_id)
+            input_vars["templateId"] = template_id
 
     # Add all remaining fields directly to input_vars
     input_vars.update(update_dict)

@@ -14,6 +14,7 @@ from .domain import (
     LinearTeam,
     LinearAttachment,
     IntegrationService,
+    SLADayCountType,
     ActorBot,
     Favorite,
     Comment,
