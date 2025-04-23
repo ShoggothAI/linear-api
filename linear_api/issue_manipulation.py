@@ -323,7 +323,43 @@ def get_linear_issue(issue_id: str) -> LinearIssue:
         out["assignee"] = LinearUser(**out["assignee"])
 
     if "project" in out and out["project"]:
-        out["project"] = LinearProject(**out["project"])
+        # The GraphQL query only returns id, name, and description for projects
+        # but the LinearProject model requires many more fields
+        # Add default values for the required fields that are missing
+        project_data = out["project"]
+        if project_data:
+            # Add required fields with default values if they're missing
+            current_time = datetime.now()
+
+            # Import the enum types we need
+            from linear_api.domain import ProjectStatusType, FrequencyResolutionType, ProjectStatus
+
+            defaults = {
+                "createdAt": current_time,
+                "updatedAt": current_time,
+                "slugId": "default-slug",
+                "url": f"https://linear.app/project/{project_data['id']}",
+                "color": "#000000",
+                "priority": 0,
+                "priorityLabel": "None",
+                "prioritySortOrder": 0.0,
+                "sortOrder": 0.0,
+                "progress": 0.0,
+                "status": {"type": ProjectStatusType.PLANNED},  # Create a ProjectStatus object with type field
+                "scope": 0.0,
+                "frequencyResolution": FrequencyResolutionType.WEEKLY
+            }
+
+            # Add default values for any missing required fields
+            for key, value in defaults.items():
+                if key not in project_data:
+                    project_data[key] = value
+
+            # Convert status dict to ProjectStatus object
+            if "status" in project_data and isinstance(project_data["status"], dict):
+                project_data["status"] = ProjectStatus(**project_data["status"])
+
+            out["project"] = LinearProject(**project_data)
 
     if "creator" in out and out["creator"]:
         out["creator"] = LinearUser(**out["creator"])

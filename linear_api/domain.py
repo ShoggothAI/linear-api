@@ -73,6 +73,19 @@ class LinearLabel(BaseModel):
     color: str
 
 
+class LinearUserReference(BaseModel):
+    """Simplified user reference for nested objects"""
+    id: str
+    name: str
+    displayName: str
+    email: str
+
+    # Optional fields
+    createdAt: Optional[datetime] = None
+    updatedAt: Optional[datetime] = None
+    avatarUrl: Optional[str] = None
+
+
 class LinearUser(BaseModel):
     # Required fields
     id: str
@@ -85,6 +98,8 @@ class LinearUser(BaseModel):
     # Optional fields from original model
     avatarUrl: Optional[str] = None
     archivedAt: Optional[datetime] = None
+
+    # Additional fields from API
     active: bool = False
     admin: bool = False
     app: bool = False
@@ -105,34 +120,284 @@ class LinearUser(BaseModel):
     url: Optional[str] = None
 
     # Complex fields with their models
-    assignedIssues: Optional[Dict[str, Any]] = (
-        None  # Will be Connection[LinearIssue] when fully implemented
-    )
-    createdIssues: Optional[Dict[str, Any]] = (
-        None  # Will be Connection[LinearIssue] when fully implemented
-    )
-    drafts: Optional[Dict[str, Any]] = None  # Will be Connection[Draft] when fully implemented
-    issueDrafts: Optional[Dict[str, Any]] = (
-        None  # Will be Connection[IssueDraft] when fully implemented
-    )
+    assignedIssues: Optional[Dict[str, Any]] = None  # Will be Connection[LinearIssue] when fully implemented
+    createdIssues: Optional[Dict[str, Any]] = None   # Will be Connection[LinearIssue] when fully implemented
+    drafts: Optional[Dict[str, Any]] = None          # Will be Connection[Draft] when fully implemented
+    issueDrafts: Optional[Dict[str, Any]] = None     # Will be Connection[IssueDraft] when fully implemented
     organization: Optional[Organization] = None
-    teamMemberships: Optional[Dict[str, Any]] = (
-        None  # Will be Connection[TeamMembership] when fully implemented
-    )
-    teams: Optional[Dict[str, Any]] = None  # Will be Connection[LinearTeam] when fully implemented
+    teamMemberships: Optional[Dict[str, Any]] = None  # Will be Connection[TeamMembership] when fully implemented
+    teams: Optional[Dict[str, Any]] = None           # Will be Connection[LinearTeam] when fully implemented
 
 
-class LinearProject(BaseModel):
+# Forward declarations for connection classes
+class Comment(BaseModel):
+    """Represents a comment in Linear"""
+
+    id: str
+    body: str
+    createdAt: datetime
+    updatedAt: datetime
+
+
+# For Project-related connections
+class CommentConnection(BaseModel):
+    """Connection model for comments"""
+    nodes: List[Comment] = Field(default_factory=list)
+    pageInfo: Optional[Dict[str, Any]] = None
+
+
+class DocumentConnection(BaseModel):
+    """Connection model for documents"""
+    nodes: List[Dict[str, Any]] = Field(default_factory=list)
+    pageInfo: Optional[Dict[str, Any]] = None
+
+
+class EntityExternalLinkConnection(BaseModel):
+    """Connection model for external links"""
+    nodes: List[Dict[str, Any]] = Field(default_factory=list)
+    pageInfo: Optional[Dict[str, Any]] = None
+
+
+class ProjectHistoryConnection(BaseModel):
+    """Connection model for project history"""
+    nodes: List[Dict[str, Any]] = Field(default_factory=list)
+    pageInfo: Optional[Dict[str, Any]] = None
+
+
+class InitiativeConnection(BaseModel):
+    """Connection model for initiatives"""
+    nodes: List[Dict[str, Any]] = Field(default_factory=list)
+    pageInfo: Optional[Dict[str, Any]] = None
+
+
+class IntegrationsSettings(BaseModel):
+    """Represents integration settings"""
+    id: str
+
+
+class ProjectRelationConnection(BaseModel):
+    """Connection model for project relations"""
+    nodes: List[Dict[str, Any]] = Field(default_factory=list)
+    pageInfo: Optional[Dict[str, Any]] = None
+
+
+class IssueConnection(BaseModel):
+    """Connection model for issues"""
+    nodes: List[Dict[str, Any]] = Field(default_factory=list)
+    pageInfo: Optional[Dict[str, Any]] = None
+
+
+class ProjectLabelConnection(BaseModel):
+    """Connection model for project labels"""
+    nodes: List[Dict[str, Any]] = Field(default_factory=list)
+    pageInfo: Optional[Dict[str, Any]] = None
+
+
+class UserConnection(BaseModel):
+    """Connection model for users"""
+    nodes: List[LinearUserReference] = Field(default_factory=list)
+    pageInfo: Optional[Dict[str, Any]] = None
+
+
+class CustomerNeedConnection(BaseModel):
+    """Connection model for customer needs"""
+    nodes: List[Dict[str, Any]] = Field(default_factory=list)
+    pageInfo: Optional[Dict[str, Any]] = None
+
+
+# Forward declaration for ProjectMilestoneConnection
+class ProjectMilestone(BaseModel):
+    """Represents a project milestone in Linear"""
+
     id: str
     name: str
-    description: Optional[str]
 
 
+class ProjectMilestoneConnection(BaseModel):
+    """Connection model for project milestones"""
+    nodes: List[ProjectMilestone] = Field(default_factory=list)
+    pageInfo: Optional[Dict[str, Any]] = None
+
+
+class ProjectUpdate(BaseModel):
+    """Represents a project update"""
+    id: str
+
+
+class ProjectUpdateConnection(BaseModel):
+    """Connection model for project updates"""
+    nodes: List[ProjectUpdate] = Field(default_factory=list)
+    pageInfo: Optional[Dict[str, Any]] = None
+
+
+# Forward declaration for TeamConnection
 class LinearTeam(BaseModel):
+    """Represents a team in Linear"""
     id: str
     name: str
     key: str
-    description: Optional[str]
+    description: Optional[str] = None
+
+
+class TeamConnection(BaseModel):
+    """Connection model for teams"""
+    nodes: List[LinearTeam] = Field(default_factory=list)
+    pageInfo: Optional[Dict[str, Any]] = None
+
+
+class TimelessDate(BaseModel):
+    """Represents a date without time"""
+    year: int
+    month: int
+    day: int
+
+
+class DateResolutionType(StrEnum):
+    """Enum for date resolution types"""
+    DAY = "day"
+    WEEK = "week"
+    MONTH = "month"
+    QUARTER = "quarter"
+
+
+class FrequencyResolutionType(StrEnum):
+    """Enum for frequency resolution types"""
+    DAILY = "daily"
+    WEEKLY = "weekly"
+    MONTHLY = "monthly"
+
+
+class ProjectUpdateHealthType(StrEnum):
+    """Enum for project update health types"""
+    ON_TRACK = "onTrack"
+    AT_RISK = "atRisk"
+    OFF_TRACK = "offTrack"
+
+
+class ProjectStatusType(StrEnum):
+    """Enum for project status types"""
+    PLANNED = "planned"
+    BACKLOG = "backlog"
+    STARTED = "started"
+    PAUSED = "paused"
+    COMPLETED = "completed"
+    CANCELED = "canceled"
+
+
+class ProjectStatus(BaseModel):
+    """Represents a project status in Linear"""
+    type: ProjectStatusType
+
+
+class Day(StrEnum):
+    """Enum for days of the week"""
+    MONDAY = "monday"
+    TUESDAY = "tuesday"
+    WEDNESDAY = "wednesday"
+    THURSDAY = "thursday"
+    FRIDAY = "friday"
+    SATURDAY = "saturday"
+    SUNDAY = "sunday"
+
+
+class DocumentContent(BaseModel):
+    """Represents document content in Linear"""
+
+    id: str
+    content: Optional[str] = None
+
+
+class Favorite(BaseModel):
+    """Represents a user's favorite in Linear"""
+
+    id: str
+    createdAt: datetime
+    updatedAt: datetime
+
+
+class Template(BaseModel):
+    """Represents a template in Linear"""
+
+    id: str
+    name: str
+
+
+class LinearProject(BaseModel):
+    """Represents a complete project retrieved from Linear."""
+
+    # Required fields
+    id: str
+    name: str
+    createdAt: datetime
+    updatedAt: datetime
+    slugId: str
+    url: str
+    color: str
+    priority: int
+    priorityLabel: str
+    prioritySortOrder: float
+    sortOrder: float
+    progress: float
+    status: ProjectStatus
+    scope: float
+    frequencyResolution: FrequencyResolutionType
+
+    # Optional fields
+    description: Optional[str] = None
+    archivedAt: Optional[datetime] = None
+    autoArchivedAt: Optional[datetime] = None
+    canceledAt: Optional[datetime] = None
+    completedAt: Optional[datetime] = None
+    content: Optional[str] = None
+    contentState: Optional[str] = None
+    health: Optional[ProjectUpdateHealthType] = None
+    healthUpdatedAt: Optional[datetime] = None
+    icon: Optional[str] = None
+    startDate: Optional[TimelessDate] = None
+    startDateResolution: Optional[DateResolutionType] = None
+    startedAt: Optional[datetime] = None
+    targetDate: Optional[TimelessDate] = None
+    targetDateResolution: Optional[DateResolutionType] = None
+    trashed: Optional[bool] = None
+    updateReminderFrequency: Optional[float] = None
+    updateReminderFrequencyInWeeks: Optional[float] = None
+    updateRemindersDay: Optional[Day] = None
+    updateRemindersHour: Optional[float] = None
+    projectUpdateRemindersPausedUntilAt: Optional[datetime] = None
+
+    # Complex fields
+    comments: Optional[CommentConnection] = None
+    convertedFromIssue: Optional[Dict[str, Any]] = None
+    creator: Optional[LinearUserReference] = None
+    currentProgress: Optional[Dict[str, Any]] = None
+    documentContent: Optional[DocumentContent] = None
+    documents: Optional[DocumentConnection] = None
+    externalLinks: Optional[EntityExternalLinkConnection] = None
+    favorite: Optional[Favorite] = None
+    history: Optional[ProjectHistoryConnection] = None
+    initiatives: Optional[InitiativeConnection] = None
+    integrationsSettings: Optional[IntegrationsSettings] = None
+    inverseRelations: Optional[ProjectRelationConnection] = None
+    issues: Optional[IssueConnection] = None
+    labelIds: Optional[List[str]] = None
+    labels: Optional[ProjectLabelConnection] = None
+    lastAppliedTemplate: Optional[Template] = None
+    lastUpdate: Optional[ProjectUpdate] = None
+    lead: Optional[LinearUserReference] = None
+    members: Optional[UserConnection] = None
+    needs: Optional[CustomerNeedConnection] = None
+    progressHistory: Optional[Dict[str, Any]] = None
+    projectMilestones: Optional[ProjectMilestoneConnection] = None
+    projectUpdates: Optional[ProjectUpdateConnection] = None
+    relations: Optional[ProjectRelationConnection] = None
+    teams: Optional[TeamConnection] = None
+
+    # Fields with unknown types in the API (marked as None in the schema validator)
+    completedIssueCountHistory: Optional[Dict[str, Any]] = None
+    completedScopeHistory: Optional[Dict[str, Any]] = None
+    inProgressScopeHistory: Optional[Dict[str, Any]] = None
+    issueCountHistory: Optional[Dict[str, Any]] = None
+    scopeHistory: Optional[Dict[str, Any]] = None
 
 
 class LinearAttachmentInput(BaseModel):
@@ -256,23 +521,6 @@ class ActorBot(BaseModel):
     name: str
 
 
-class Favorite(BaseModel):
-    """Represents a user's favorite in Linear"""
-
-    id: str
-    createdAt: datetime
-    updatedAt: datetime
-
-
-class Comment(BaseModel):
-    """Represents a comment in Linear"""
-
-    id: str
-    body: str
-    createdAt: datetime
-    updatedAt: datetime
-
-
 class Cycle(BaseModel):
     """Represents a cycle in Linear"""
 
@@ -283,33 +531,12 @@ class Cycle(BaseModel):
     endsAt: datetime
 
 
-class ProjectMilestone(BaseModel):
-    """Represents a project milestone in Linear"""
-
-    id: str
-    name: str
-
-
-class Template(BaseModel):
-    """Represents a template in Linear"""
-
-    id: str
-    name: str
-
-
 class ExternalUser(BaseModel):
     """Represents an external user in Linear"""
 
     id: str
     name: str
     email: str
-
-
-class DocumentContent(BaseModel):
-    """Represents document content in Linear"""
-
-    id: str
-    content: Optional[str] = None
 
 
 class LinearIssue(BaseModel):
