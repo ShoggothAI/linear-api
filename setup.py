@@ -7,13 +7,13 @@ setuptools.setup(
     name="linear-api",
     version="0.1.0",
     author="Motley Stories AG",
-    author_email="egor@motley.ai",  # Add your email here
+    author_email="egor@motley.ai",
     description="A set of Python utilities for calling the Linear API",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/ZmeiGorynych/linear-api",  # Update with your GitHub repo URL
+    url="https://github.com/ShoggothAI/linear-api",
     project_urls={
-        "Bug Tracker": "https://github.com/ShoggothAI/linear-api/issues",  # Update with your GitHub repo URL
+        "Bug Tracker": "https://github.com/ShoggothAI/linear-api/issues",
     },
     classifiers=[
         "Programming Language :: Python :: 3",
