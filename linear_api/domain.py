@@ -1,6 +1,6 @@
-from typing import Optional, Dict, Union, List
+from typing import Optional, Dict, Union, List, Any
 from datetime import datetime
-from enum import Enum
+from enum import Enum, StrEnum
 from typing import List, Optional
 
 from pydantic import BaseModel, Field
@@ -113,31 +113,151 @@ class LinearIssueUpdateInput(BaseModel):
     metadata: Optional[Dict[str, Union[str, int, float]]] = None
 
 
+class IntegrationService(StrEnum):
+    """Enum for integration service types"""
+
+    ASANA = "asana"
+    FIGMA = "figma"
+    GITHUB = "github"
+    GITLAB = "gitlab"
+    INTERCOM = "intercom"
+    JIRA = "jira"
+    NOTION = "notion"
+    SLACK = "slack"
+    ZENDESK = "zendesk"
+
+
+class ActorBot(BaseModel):
+    """Represents a bot actor in Linear"""
+
+    id: str
+    name: str
+
+
+class Favorite(BaseModel):
+    """Represents a user's favorite in Linear"""
+
+    id: str
+    createdAt: datetime
+    updatedAt: datetime
+
+
+class Comment(BaseModel):
+    """Represents a comment in Linear"""
+
+    id: str
+    body: str
+    createdAt: datetime
+    updatedAt: datetime
+
+
+class Cycle(BaseModel):
+    """Represents a cycle in Linear"""
+
+    id: str
+    name: str
+    number: int
+    startsAt: datetime
+    endsAt: datetime
+
+
+class ProjectMilestone(BaseModel):
+    """Represents a project milestone in Linear"""
+
+    id: str
+    name: str
+
+
+class Template(BaseModel):
+    """Represents a template in Linear"""
+
+    id: str
+    name: str
+
+
+class ExternalUser(BaseModel):
+    """Represents an external user in Linear"""
+
+    id: str
+    name: str
+    email: str
+
+
+class DocumentContent(BaseModel):
+    """Represents document content in Linear"""
+
+    id: str
+    content: Optional[str] = None
+
+
 class LinearIssue(BaseModel):
     """
     Represents a complete issue retrieved from Linear.
     """
 
+    # Required fields
     id: str
     title: str
-    description: Optional[str] = None
     url: str = Field(..., alias="url")
     state: LinearState
     priority: LinearPriority
-    assignee: Optional[LinearUser] = None
     team: LinearTeam
+    createdAt: datetime
+    updatedAt: datetime
+    number: int
+    customerTicketCount: int
+
+    # Optional fields
+    description: Optional[str] = None
+    assignee: Optional[LinearUser] = None
     project: Optional[LinearProject] = None
     labels: List[LinearLabel] = Field(default_factory=list)
     dueDate: Optional[datetime] = None
     parentId: Optional[str] = None
-    createdAt: datetime
-    updatedAt: datetime
     archivedAt: Optional[datetime] = None
-    number: int
     estimate: Optional[int] = None
     branchName: Optional[str] = None
-    customerTicketCount: int
     attachments: List[LinearAttachment] = Field(default_factory=list)
+    sortOrder: Optional[float] = None
+    prioritySortOrder: Optional[float] = None
+    startedAt: Optional[datetime] = None
+    completedAt: Optional[datetime] = None
+    startedTriageAt: Optional[datetime] = None
+    triagedAt: Optional[datetime] = None
+    canceledAt: Optional[datetime] = None
+    autoClosedAt: Optional[datetime] = None
+    autoArchivedAt: Optional[datetime] = None
+    slaStartedAt: Optional[datetime] = None
+    slaMediumRiskAt: Optional[datetime] = None
+    slaHighRiskAt: Optional[datetime] = None
+    slaBreachesAt: Optional[datetime] = None
+    slaType: Optional[str] = None
+    addedToProjectAt: Optional[datetime] = None
+    addedToCycleAt: Optional[datetime] = None
+    addedToTeamAt: Optional[datetime] = None
+    trashed: Optional[bool] = None
+    snoozedUntilAt: Optional[datetime] = None
+    suggestionsGeneratedAt: Optional[datetime] = None
+    activitySummary: Optional[Dict[str, Any]] = None
+    documentContent: Optional[DocumentContent] = None
+    labelIds: Optional[List[str]] = None
+    cycle: Optional[Cycle] = None
+    projectMilestone: Optional[ProjectMilestone] = None
+    lastAppliedTemplate: Optional[Template] = None
+    recurringIssueTemplate: Optional[Template] = None
+    previousIdentifiers: Optional[List[str]] = None
+    creator: Optional[LinearUser] = None
+    externalUserCreator: Optional[ExternalUser] = None
+    snoozedBy: Optional[LinearUser] = None
+    subIssueSortOrder: Optional[float] = None
+    reactionData: Optional[Dict[str, Any]] = None
+    priorityLabel: Optional[str] = None
+    sourceComment: Optional[Comment] = None
+    integrationSourceType: Optional[IntegrationService] = None
+    botActor: Optional[ActorBot] = None
+    favorite: Optional[Favorite] = None
+    identifier: Optional[str] = None
+    descriptionState: Optional[str] = None
 
     @property
     def metadata(self) -> Dict[str, Union[str, int, float]]:

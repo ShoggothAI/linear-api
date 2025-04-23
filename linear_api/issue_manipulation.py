@@ -16,6 +16,15 @@ from linear_api.domain import (
     LinearIssueInput,
     LinearIssueUpdateInput,
     LinearAttachmentInput,
+    IntegrationService,
+    ActorBot,
+    Favorite,
+    Comment,
+    Cycle,
+    ProjectMilestone,
+    Template,
+    ExternalUser,
+    DocumentContent,
 )
 from linear_api.get_resources import team_name_to_id, state_name_to_id
 from linear_api.project_manipulation import project_name_to_id
@@ -155,9 +164,13 @@ def get_linear_issue(issue_id: str) -> LinearIssue:
             id
             title
             description
+            descriptionState
             url
             state { id name type color }
             priority
+            priorityLabel
+            prioritySortOrder
+            sortOrder
             assignee { id name email displayName avatarUrl createdAt updatedAt archivedAt }
             team { id name key description }
             labels{
@@ -167,16 +180,52 @@ def get_linear_issue(issue_id: str) -> LinearIssue:
                         color
                       }
                     }
+            labelIds
             project { id name description }
+            projectMilestone { id name }
+            cycle { id name number startsAt endsAt }
             dueDate
             createdAt
             updatedAt
             archivedAt
+            startedAt
+            completedAt
+            startedTriageAt
+            triagedAt
+            canceledAt
+            autoClosedAt
+            autoArchivedAt
+            addedToProjectAt
+            addedToCycleAt
+            addedToTeamAt
+            slaStartedAt
+            slaMediumRiskAt
+            slaHighRiskAt
+            slaBreachesAt
+            slaType
+            snoozedUntilAt
+            suggestionsGeneratedAt
             number
             parent { id }
             estimate
             branchName
             customerTicketCount
+            trashed
+            identifier
+            subIssueSortOrder
+            activitySummary
+            reactionData
+            integrationSourceType
+            creator { id name email displayName avatarUrl createdAt updatedAt archivedAt }
+            externalUserCreator { id name email }
+            snoozedBy { id name email displayName avatarUrl createdAt updatedAt archivedAt }
+            botActor { id name }
+            favorite { id createdAt updatedAt }
+            sourceComment { id body createdAt updatedAt }
+            lastAppliedTemplate { id name }
+            recurringIssueTemplate { id name }
+            previousIdentifiers
+            documentContent { id content }
             attachments {
               nodes {
                 id
@@ -193,38 +242,103 @@ def get_linear_issue(issue_id: str) -> LinearIssue:
     """
 
     out = call_linear_api({"query": query, "variables": {"issueId": issue_id}})["issue"]
+
+    # Process attachments
     attachments = []
-    for attachment in out["attachments"]["nodes"]:
+    for attachment in out.get("attachments", {}).get("nodes", []):
         attachment["issueId"] = issue_id
         attachments.append(LinearAttachment(**attachment))
-    labels = []
-    for label in out["labels"]["nodes"]:
-        labels.append(LinearLabel(**label))
-
     out["attachments"] = attachments
-    out["state"] = LinearState(**out["state"])
-    out["team"] = LinearTeam(**out["team"])
-    out["labels"] = labels
-    if out["assignee"]:
-        out["assignee"] = LinearUser(**out["assignee"])
-    if out["project"]:
-        out["project"] = LinearProject(**out["project"])
-    out["priority"] = LinearPriority(out["priority"])
-    if out["dueDate"]:
-        out["dueDate"] = datetime.fromisoformat(out["dueDate"])
-    out["createdAt"] = datetime.fromisoformat(out["createdAt"])
-    out["updatedAt"] = datetime.fromisoformat(out["updatedAt"])
-    if out["archivedAt"]:
-        out["archivedAt"] = datetime.fromisoformat(out["archivedAt"])
-    parent = out.pop("parent")
-    if parent:
-        out["parentId"] = parent["id"]
 
+    # Process labels
+    labels = []
+    for label in out.get("labels", {}).get("nodes", []):
+        labels.append(LinearLabel(**label))
+    out["labels"] = labels
+
+    # Process nested objects
+    if "state" in out and out["state"]:
+        out["state"] = LinearState(**out["state"])
+
+    if "team" in out and out["team"]:
+        out["team"] = LinearTeam(**out["team"])
+
+    if "assignee" in out and out["assignee"]:
+        out["assignee"] = LinearUser(**out["assignee"])
+
+    if "project" in out and out["project"]:
+        out["project"] = LinearProject(**out["project"])
+
+    if "creator" in out and out["creator"]:
+        out["creator"] = LinearUser(**out["creator"])
+
+    if "snoozedBy" in out and out["snoozedBy"]:
+        out["snoozedBy"] = LinearUser(**out["snoozedBy"])
+
+    if "externalUserCreator" in out and out["externalUserCreator"]:
+        out["externalUserCreator"] = ExternalUser(**out["externalUserCreator"])
+
+    if "botActor" in out and out["botActor"]:
+        out["botActor"] = ActorBot(**out["botActor"])
+
+    if "favorite" in out and out["favorite"]:
+        out["favorite"] = Favorite(**out["favorite"])
+
+    if "sourceComment" in out and out["sourceComment"]:
+        out["sourceComment"] = Comment(**out["sourceComment"])
+
+    if "cycle" in out and out["cycle"]:
+        out["cycle"] = Cycle(**out["cycle"])
+
+    if "projectMilestone" in out and out["projectMilestone"]:
+        out["projectMilestone"] = ProjectMilestone(**out["projectMilestone"])
+
+    if "lastAppliedTemplate" in out and out["lastAppliedTemplate"]:
+        out["lastAppliedTemplate"] = Template(**out["lastAppliedTemplate"])
+
+    if "recurringIssueTemplate" in out and out["recurringIssueTemplate"]:
+        out["recurringIssueTemplate"] = Template(**out["recurringIssueTemplate"])
+
+    if "documentContent" in out and out["documentContent"]:
+        out["documentContent"] = DocumentContent(**out["documentContent"])
+
+    # Process enums
+    if "priority" in out:
+        out["priority"] = LinearPriority(out["priority"])
+
+    if "integrationSourceType" in out and out["integrationSourceType"]:
+        out["integrationSourceType"] = IntegrationService(out["integrationSourceType"])
+
+    # Handle reactionData - API might return a list instead of a dict
+    if "reactionData" in out:
+        if isinstance(out["reactionData"], list):
+            # Convert to empty dict if it's an empty list
+            out["reactionData"] = {}
+
+    # Process datetime fields
+    datetime_fields = [
+        "createdAt", "updatedAt", "archivedAt", "startedAt", "completedAt",
+        "startedTriageAt", "triagedAt", "canceledAt", "autoClosedAt", "autoArchivedAt",
+        "addedToProjectAt", "addedToCycleAt", "addedToTeamAt", "slaStartedAt",
+        "slaMediumRiskAt", "slaHighRiskAt", "slaBreachesAt", "snoozedUntilAt",
+        "suggestionsGeneratedAt", "dueDate"
+    ]
+
+    for field in datetime_fields:
+        if field in out and out[field]:
+            out[field] = datetime.fromisoformat(out[field])
+
+    # Handle parent relationship
+    if "parent" in out and out["parent"]:
+        out["parentId"] = out["parent"]["id"]
+    out.pop("parent", None)  # Remove parent field as we've extracted the ID
+
+    # Create the LinearIssue object
     issue = LinearIssue(**out)
     return issue
 
 
-def get_team_issues(team_name: str) -> Dict[str, str]:
+def get_team_issues(team_name: str) -> Dict[str, Dict[str, Any]]:
     """
     Get all issues for a specific team with pagination.
 
@@ -232,7 +346,7 @@ def get_team_issues(team_name: str) -> Dict[str, str]:
         team_name: The name of the team to get issues for
 
     Returns:
-        A dictionary mapping issue IDs to their titles
+        A dictionary mapping issue IDs to issue details
 
     Raises:
         ValueError: If the team name doesn't exist
@@ -247,6 +361,19 @@ def get_team_issues(team_name: str) -> Dict[str, str]:
             nodes {
                 id
                 title
+                identifier
+                priority
+                priorityLabel
+                state { id name type color }
+                assignee { id name displayName }
+                createdAt
+                updatedAt
+                number
+                estimate
+                dueDate
+                startedAt
+                completedAt
+                trashed
             }
             pageInfo {
                 hasNextPage
@@ -268,7 +395,26 @@ def get_team_issues(team_name: str) -> Dict[str, str]:
 
         # Extract issues and add them to the dictionary
         for issue in response["issues"]["nodes"]:
-            issues[issue["id"]] = issue["title"]
+            issue_id = issue["id"]
+
+            # Process nested objects
+            if "state" in issue and issue["state"]:
+                issue["state"] = LinearState(**issue["state"])
+
+            if "assignee" in issue and issue["assignee"]:
+                issue["assignee"] = LinearUser(**issue["assignee"])
+
+            # Process priority
+            if "priority" in issue and issue["priority"] is not None:
+                issue["priority"] = LinearPriority(issue["priority"])
+
+            # Process datetime fields
+            datetime_fields = ["createdAt", "updatedAt", "dueDate", "startedAt", "completedAt"]
+            for field in datetime_fields:
+                if field in issue and issue[field]:
+                    issue[field] = datetime.fromisoformat(issue[field])
+
+            issues[issue_id] = issue
 
         # Check if there are more pages
         if not response["issues"]["pageInfo"]["hasNextPage"]:
