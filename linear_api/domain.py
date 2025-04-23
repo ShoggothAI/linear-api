@@ -1,7 +1,6 @@
-from typing import Optional, Dict, Union, List, Any
+from typing import Optional, Dict, Union, List, Any, Generic, TypeVar
 from datetime import datetime
 from enum import Enum, StrEnum
-from typing import List, Optional
 
 from pydantic import BaseModel, Field
 
@@ -21,6 +20,46 @@ class SLADayCountType(StrEnum):
     ONLY_BUSINESS_DAYS = "onlyBusinessDays"
 
 
+# Generic connection type for pagination
+T = TypeVar("T")
+
+
+class Connection(BaseModel, Generic[T]):
+    """Generic connection model for paginated results"""
+
+    nodes: List[T] = Field(default_factory=list)
+    pageInfo: Optional[Dict[str, Any]] = None
+
+
+class Organization(BaseModel):
+    """Represents an organization in Linear"""
+
+    id: str
+    name: str
+    # Add other fields as needed
+
+
+class TeamMembership(BaseModel):
+    """Represents a team membership in Linear"""
+
+    id: str
+    # Add other fields as needed
+
+
+class Draft(BaseModel):
+    """Represents a draft in Linear"""
+
+    id: str
+    # Add other fields as needed
+
+
+class IssueDraft(BaseModel):
+    """Represents an issue draft in Linear"""
+
+    id: str
+    # Add other fields as needed
+
+
 class LinearState(BaseModel):
     id: str
     name: str
@@ -35,14 +74,52 @@ class LinearLabel(BaseModel):
 
 
 class LinearUser(BaseModel):
+    # Required fields
     id: str
     name: str
     displayName: str
     email: str
-    avatarUrl: Optional[str]
     createdAt: datetime
     updatedAt: datetime
+
+    # Optional fields from original model
+    avatarUrl: Optional[str] = None
     archivedAt: Optional[datetime] = None
+    active: bool = False
+    admin: bool = False
+    app: bool = False
+    avatarBackgroundColor: Optional[str] = None
+    calendarHash: Optional[str] = None
+    createdIssueCount: int = 0
+    description: Optional[str] = None
+    disableReason: Optional[str] = None
+    guest: bool = False
+    initials: Optional[str] = None
+    inviteHash: Optional[str] = None
+    isMe: bool = False
+    lastSeen: Optional[datetime] = None
+    statusEmoji: Optional[str] = None
+    statusLabel: Optional[str] = None
+    statusUntilAt: Optional[datetime] = None
+    timezone: Optional[str] = None
+    url: Optional[str] = None
+
+    # Complex fields with their models
+    assignedIssues: Optional[Dict[str, Any]] = (
+        None  # Will be Connection[LinearIssue] when fully implemented
+    )
+    createdIssues: Optional[Dict[str, Any]] = (
+        None  # Will be Connection[LinearIssue] when fully implemented
+    )
+    drafts: Optional[Dict[str, Any]] = None  # Will be Connection[Draft] when fully implemented
+    issueDrafts: Optional[Dict[str, Any]] = (
+        None  # Will be Connection[IssueDraft] when fully implemented
+    )
+    organization: Optional[Organization] = None
+    teamMemberships: Optional[Dict[str, Any]] = (
+        None  # Will be Connection[TeamMembership] when fully implemented
+    )
+    teams: Optional[Dict[str, Any]] = None  # Will be Connection[LinearTeam] when fully implemented
 
 
 class LinearProject(BaseModel):
