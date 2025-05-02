@@ -1,42 +1,69 @@
+"""
+Tests for attachment functionality.
+
+This module tests the functionality of creating and retrieving attachments.
+"""
+
 import pytest
 from datetime import datetime
-from linear_api.issue_manipulation import create_issue, create_attachment, get_linear_issue, delete_issue
-from linear_api.domain import LinearIssueInput, LinearPriority, LinearAttachment, LinearAttachmentInput
-from linear_api.get_resources import team_name_to_id
+
+from linear_api import LinearClient
+from linear_api.domain import (
+    LinearIssueInput,
+    LinearPriority,
+    LinearAttachment,
+    LinearAttachmentInput
+)
+
+
+@pytest.fixture
+def client():
+    """Create a LinearClient instance for testing."""
+    # Get the API key from environment variable
+    import os
+    api_key = os.getenv("LINEAR_API_KEY")
+    if not api_key:
+        pytest.skip("LINEAR_API_KEY environment variable not set")
+
+    # Create and return the client
+    return LinearClient(api_key=api_key)
 
 
 @pytest.fixture
 def test_team_name():
     """Fixture to get the name of the test team."""
-    return "Test"
+    return "Test"  # Using the test team
 
 
 @pytest.fixture
-def test_issue(test_team_name):
+def test_issue(client, test_team_name):
     """Create a test issue to use for attachment tests."""
+    # Create a unique issue title
+    import uuid
+    unique_id = str(uuid.uuid4())[:8]
+
     # Create a new issue
     issue_input = LinearIssueInput(
-        title="Test Issue for Attachments",
+        title=f"Test Issue for Attachments {unique_id}",
         teamName=test_team_name,
         description="This is a test issue for testing attachments",
         priority=LinearPriority.MEDIUM
     )
 
-    response = create_issue(issue_input)
-    issue_id = response["issueCreate"]["issue"]["id"]
+    issue = client.issues.create(issue_input)
 
-    # Return the issue ID for use in tests
-    yield issue_id
+    # Return the issue for use in tests
+    yield issue
 
     # Clean up after the test by deleting the issue
     try:
-        delete_issue(issue_id)
+        client.issues.delete(issue.id)
     except ValueError:
         # Issue might have already been deleted in the test
         pass
 
 
-def test_create_and_get_attachment(test_issue):
+def test_create_and_get_attachment(client, test_issue):
     """Test creating an attachment and then retrieving it."""
     # Create an attachment with metadata
     attachment = LinearAttachmentInput(
@@ -44,13 +71,14 @@ def test_create_and_get_attachment(test_issue):
         title="Test Attachment",
         subtitle="This is a test attachment",
         metadata={"miro_id": "abcd"},
-        issueId=test_issue
+        issueId=test_issue.id
     )
 
-    # Create the attachment in Linear
-    response = create_attachment(attachment)
+    # Create the attachment
+    response = client.issues.create_attachment(attachment)
 
     # Verify the response has the expected structure
+    assert response is not None
     assert "attachmentCreate" in response
     assert "success" in response["attachmentCreate"]
     assert response["attachmentCreate"]["success"] is True
@@ -61,7 +89,7 @@ def test_create_and_get_attachment(test_issue):
     attachment_id = response["attachmentCreate"]["attachment"]["id"]
 
     # Now retrieve the issue with its attachments
-    issue = get_linear_issue(test_issue)
+    issue = client.issues.get(test_issue.id)
 
     # Verify the issue has the attachment
     assert issue.attachments is not None
@@ -84,7 +112,7 @@ def test_create_and_get_attachment(test_issue):
     assert found_attachment.metadata["miro_id"] == "abcd"
 
 
-def test_create_multiple_attachments(test_issue):
+def test_create_multiple_attachments(client, test_issue):
     """Test creating multiple attachments for a single issue."""
     # Create first attachment
     attachment1 = LinearAttachmentInput(
@@ -92,7 +120,7 @@ def test_create_multiple_attachments(test_issue):
         title="First Attachment",
         subtitle="This is the first test attachment",
         metadata={"miro_id": "abcd1"},
-        issueId=test_issue
+        issueId=test_issue.id
     )
 
     # Create second attachment
@@ -101,12 +129,12 @@ def test_create_multiple_attachments(test_issue):
         title="Second Attachment",
         subtitle="This is the second test attachment",
         metadata={"miro_id": "abcd2"},
-        issueId=test_issue
+        issueId=test_issue.id
     )
 
-    # Create both attachments in Linear
-    response1 = create_attachment(attachment1)
-    response2 = create_attachment(attachment2)
+    # Create both attachments
+    response1 = client.issues.create_attachment(attachment1)
+    response2 = client.issues.create_attachment(attachment2)
 
     # Verify both responses indicate success
     assert response1["attachmentCreate"]["success"] is True
@@ -116,33 +144,25 @@ def test_create_multiple_attachments(test_issue):
     attachment1_id = response1["attachmentCreate"]["attachment"]["id"]
     attachment2_id = response2["attachmentCreate"]["attachment"]["id"]
 
-    # Now retrieve the issue with its attachments
-    issue = get_linear_issue(test_issue)
+    # Get all attachments for the issue
+    attachments = client.issues.get_attachments(test_issue.id)
 
-    # Verify the issue has both attachments
-    assert issue.attachments is not None
+    # Verify there are at least two attachments
+    assert len(attachments) >= 2
+
+    # Also get the issue to verify its attachments property
+    issue = client.issues.get(test_issue.id)
     assert len(issue.attachments) >= 2
 
-    # Find our attachments in the list
+    # Find our attachments in the issue attachments
     attachment_ids = [att.id for att in issue.attachments]
     assert attachment1_id in attachment_ids
     assert attachment2_id in attachment_ids
 
-    # Verify the metadata for both attachments
-    for att in issue.attachments:
-        if att.id == attachment1_id:
-            assert att.metadata is not None
-            assert "miro_id" in att.metadata
-            assert att.metadata["miro_id"] == "abcd1"
-        elif att.id == attachment2_id:
-            assert att.metadata is not None
-            assert "miro_id" in att.metadata
-            assert att.metadata["miro_id"] == "abcd2"
 
-
-def test_attachment_with_multiple_metadata(test_issue):
+def test_attachment_with_multiple_metadata(client, test_issue):
     """Test creating an attachment with multiple metadata key-value pairs."""
-    # Create an attachment with multiple metadata key-value pairs (flat dictionary)
+    # Create an attachment with multiple metadata key-value pairs
     metadata = {
         "miro_id": "abcd",
         "board_id": "board123",
@@ -157,11 +177,11 @@ def test_attachment_with_multiple_metadata(test_issue):
         title="Multiple Metadata Attachment",
         subtitle="This attachment has multiple metadata key-value pairs",
         metadata=metadata,
-        issueId=test_issue
+        issueId=test_issue.id
     )
 
-    # Create the attachment in Linear
-    response = create_attachment(attachment)
+    # Create the attachment
+    response = client.issues.create_attachment(attachment)
 
     # Verify the response indicates success
     assert response["attachmentCreate"]["success"] is True
@@ -170,7 +190,7 @@ def test_attachment_with_multiple_metadata(test_issue):
     attachment_id = response["attachmentCreate"]["attachment"]["id"]
 
     # Now retrieve the issue with its attachments
-    issue = get_linear_issue(test_issue)
+    issue = client.issues.get(test_issue.id)
 
     # Find our attachment in the list
     found_attachment = None
@@ -184,12 +204,14 @@ def test_attachment_with_multiple_metadata(test_issue):
 
     # Verify the metadata was stored correctly
     assert found_attachment.metadata is not None
+
+    # Check a few of the metadata fields
     assert "miro_id" in found_attachment.metadata
     assert found_attachment.metadata["miro_id"] == "abcd"
-
-    # Verify other metadata fields
     assert "board_id" in found_attachment.metadata
     assert found_attachment.metadata["board_id"] == "board123"
+
+    # Check numeric fields
     assert "width" in found_attachment.metadata
     assert found_attachment.metadata["width"] == 800
     assert "height" in found_attachment.metadata

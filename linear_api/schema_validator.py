@@ -11,7 +11,6 @@ import os
 
 from pydantic import BaseModel
 
-from linear_api.call_linear_api import call_linear_api
 from linear_api.domain import (
     LinearIssue,
     LinearUser,
@@ -26,10 +25,10 @@ from linear_api.domain import (
 def get_schema_for_type(type_name: str) -> Dict[str, Any]:
     """
     Use GraphQL introspection to get the schema for a specific type.
-    
+
     Args:
         type_name: The name of the GraphQL type to introspect
-        
+
     Returns:
         A dictionary containing the type's fields and their types
     """
@@ -54,14 +53,14 @@ def get_schema_for_type(type_name: str) -> Dict[str, Any]:
       }
     }
     """
-    
+
     response = call_linear_api(
         {"query": introspection_query, "variables": {"typeName": type_name}}
     )
-    
+
     if not response or "__type" not in response:
         raise ValueError(f"Type '{type_name}' not found in the Linear API schema")
-    
+
     return response["__type"]
 
 

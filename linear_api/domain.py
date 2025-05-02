@@ -404,7 +404,7 @@ class LinearAttachmentInput(BaseModel):
     url: str
     title: Optional[str] = None
     subtitle: Optional[str] = None
-    metadata: Optional[Dict[str, Union[str, int, float]]] = None
+    metadata: Optional[Dict[str, Any]] = None
     issueId: str
 
 
@@ -414,7 +414,7 @@ class LinearAttachment(BaseModel):
     title: Optional[str]  # Title of the attachment
     subtitle: Optional[str]  # Subtitle or additional description
     metadata: Optional[
-        Dict[str, Union[str, int, float]]
+        Dict[str, Any]
     ]  # Key-value metadata (can store JSON payloads)
     issueId: str  # ID of the issue this attachment is associated with
     createdAt: datetime  # Timestamp when the attachment was created
@@ -457,7 +457,7 @@ class LinearIssueInput(BaseModel):
     completedAt: Optional[datetime] = None
 
     # metadata will be auto-converted into an attachment
-    metadata: Optional[Dict[str, Union[str, int, float]]] = None
+    metadata: Optional[Dict[str, Any]] = None
 
 
 class LinearIssueUpdateInput(BaseModel):
@@ -497,7 +497,7 @@ class LinearIssueUpdateInput(BaseModel):
     autoClosedByParentClosing: Optional[bool] = None
 
     # metadata will be auto-converted into an attachment
-    metadata: Optional[Dict[str, Union[str, int, float]]] = None
+    metadata: Optional[Dict[str, Any]] = None
 
 
 class IntegrationService(StrEnum):
