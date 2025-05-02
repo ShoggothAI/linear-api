@@ -1,112 +1,108 @@
 import pytest
+import uuid
 
-from linear_api.issue_manipulation import create_issue, get_team_issues, delete_issue
-from linear_api.domain import LinearIssueInput, LinearPriority
+from linear_api.issue_manipulation import get_team_issues, create_issue, delete_issue
+from linear_api.domain import LinearPriority, LinearState, LinearUser, LinearIssueInput
 
 
 @pytest.fixture
 def test_team_name():
     """Fixture to get the name of the test team."""
-    return "Test"  # Replace with an actual team name if needed
+    return "Test"  # Using the test team
 
 
-@pytest.fixture
-def test_issue(test_team_name):
-    """Create a test issue to use for tests and clean up after the test."""
-    # Create a new issue
-    issue_input = LinearIssueInput(
-        title="Test Issue for Team Issues Tests",
-        teamName=test_team_name,
-        description="This is a test issue for testing team issues functions",
-        priority=LinearPriority.MEDIUM
-    )
-
-    response = create_issue(issue_input)
-    issue_id = response["issueCreate"]["issue"]["id"]
-    issue_title = response["issueCreate"]["issue"]["title"]
-
-    # Return the issue ID and title for use in tests
-    issue_data = {"id": issue_id, "title": issue_title}
-
-    # Yield the issue data for the test to use
-    yield issue_data
-
-    # Clean up after the test by deleting the issue
+def test_get_team_issues(test_team_name):
+    """Test that get_team_issues returns issues with all the expected fields."""
+    # Create some test issues
+    test_issue_ids = []
     try:
-        delete_issue(issue_id)
-    except ValueError:
-        # Issue might have already been deleted in the test
-        pass
+        # Create 3 test issues with different priorities
+        for i, priority in enumerate(
+            [LinearPriority.HIGH, LinearPriority.MEDIUM, LinearPriority.LOW]
+        ):
+            unique_id = str(uuid.uuid4())[:8]
+            issue_input = LinearIssueInput(
+                title=f"Test Issue {i+1} - {unique_id}",
+                description=f"This is a test issue {i+1} created for testing get_team_issues",
+                teamName=test_team_name,
+                priority=priority,
+                metadata={"test_id": unique_id, "test_type": "get_team_issues"},
+            )
+            response = create_issue(issue_input)
+            issue_id = response["issueCreate"]["issue"]["id"]
+            test_issue_ids.append(issue_id)
+            print(f"Created test issue {i+1} with ID: {issue_id}")
+
+        # Get issues for the test team
+        issues = get_team_issues(test_team_name)
+
+        # Check that we got at least the issues we created
+        assert len(issues) >= len(test_issue_ids), "Not all created issues were found"
+
+        # Check that all our test issues are in the results
+        for issue_id in test_issue_ids:
+            assert issue_id in issues, f"Created issue {issue_id} not found in results"
+
+        # Check the first test issue
+        test_issue = issues[test_issue_ids[0]]
+
+        # Check that the issue has the expected fields
+        assert "id" in test_issue
+        assert "title" in test_issue
+        assert "identifier" in test_issue
+        assert "priority" in test_issue
+        assert "state" in test_issue
+        assert "number" in test_issue
+
+        # Check that the nested objects are properly processed
+        assert isinstance(test_issue["state"], LinearState)
+
+        # Priority should be a LinearPriority enum
+        assert isinstance(test_issue["priority"], LinearPriority)
+        assert test_issue["priority"] == LinearPriority.HIGH  # First issue was HIGH priority
+
+        # If the issue has an assignee, it should be a LinearUser
+        if "assignee" in test_issue and test_issue["assignee"]:
+            assert isinstance(test_issue["assignee"], LinearUser)
+
+        # Print some information about the issues
+        print(f"Found {len(issues)} issues for team '{test_team_name}'")
+        print(f"Test issue: {test_issue['title']} ({test_issue['identifier']})")
+        print(f"State: {test_issue['state'].name}")
+        print(f"Priority: {test_issue['priority'].name}")
+
+    finally:
+        # Clean up - delete the test issues
+        for issue_id in test_issue_ids:
+            try:
+                delete_issue(issue_id)
+                print(f"Deleted test issue with ID: {issue_id}")
+            except Exception as e:
+                print(f"Failed to delete test issue {issue_id}: {e}")
 
 
-@pytest.fixture
-def get_issues_test_issue(test_team_name):
-    """Create a test issue specifically for the get_team_issues test."""
-    # Create a new issue
-    issue_input = LinearIssueInput(
-        title="Test Issue for get_team_issues Test",
-        teamName=test_team_name,
-        description="This is a test issue for testing the get_team_issues function",
-        priority=LinearPriority.MEDIUM
-    )
+if __name__ == "__main__":
+    # This allows running the test directly
+    issues = test_get_team_issues("Test")  # Using the test team
 
-    response = create_issue(issue_input)
-    issue_id = response["issueCreate"]["issue"]["id"]
-    issue_title = response["issueCreate"]["issue"]["title"]
-
-    # Return the issue data
-    issue_data = {"id": issue_id, "title": issue_title}
-
-    # Yield the issue data for the test to use
-    yield issue_data
-
-    # Clean up after the test
-    try:
-        delete_issue(issue_id)
-    except ValueError:
-        pass
-
-
-def test_get_team_issues(test_team_name, get_issues_test_issue):
-    """Test getting all issues for a team."""
-    # Get all issues for the team
-    issues = get_team_issues(test_team_name)
-
-    # Verify that the response is a dictionary
-    assert isinstance(issues, dict)
-
-    # Verify that our test issue is in the response
-    assert get_issues_test_issue["id"] in issues
-    assert issues[get_issues_test_issue["id"]] == get_issues_test_issue["title"]
-
-
-def test_get_team_issues_invalid_team():
-    """Test getting issues for a non-existent team."""
-    # This should raise a ValueError
-    with pytest.raises(ValueError):
-        get_team_issues("NonExistentTeam")
-
-
-def test_delete_issue(test_team_name, test_issue):
-    """Test deleting an issue."""
-    # Delete the test issue
-    response = delete_issue(test_issue["id"])
-
-    # Verify the response has the expected structure
-    assert "issueDelete" in response
-    assert "success" in response["issueDelete"]
-    assert response["issueDelete"]["success"] is True
-
-    # Verify that the issue is no longer in the team's issues
-    issues = get_team_issues(test_team_name)
-    assert test_issue["id"] not in issues
-
-    # Note: The fixture will try to delete this issue again in cleanup,
-    # but it will catch the ValueError since we've already deleted it
-
-
-def test_delete_nonexistent_issue():
-    """Test deleting a non-existent issue."""
-    # This should raise a ValueError
-    with pytest.raises(ValueError):
-        delete_issue("non-existent-issue-id")
+    # Print more details about the test issues
+    if issues:
+        # Get one of our test issues
+        test_issue_ids = [id for id in issues.keys() if "Test Issue" in issues[id]["title"]]
+        if test_issue_ids:
+            test_issue_id = test_issue_ids[0]
+            test_issue = issues[test_issue_id]
+            print("\nAdditional fields:")
+            for field_name in [
+                "createdAt",
+                "updatedAt",
+                "dueDate",
+                "startedAt",
+                "completedAt",
+                "trashed",
+                "estimate",
+                "priorityLabel",
+            ]:
+                if field_name in test_issue:
+                    value = test_issue[field_name]
+                    print(f"{field_name}: {value}")

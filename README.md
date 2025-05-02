@@ -4,7 +4,7 @@ A comprehensive Python wrapper for the Linear API with rich Pydantic models and 
 
 ## Features
 
-- **Pydantic Data Models**: Robust domain objects with fairly complete field sets for Issues, Users, Teams, Projects, and more
+- **Pydantic Data Models**: Robust domain objects with fairly complete field sets for Issues, Users, and Projects (validated via GraphQL introspection)
 - **Simplified API**: Easy-to-use functions for common Linear operations
 - **Metadata Support**: Transparently store and retrieve key-value pairs as attachments to issues
 - **Pagination Handling**: Built-in support for paginated API responses

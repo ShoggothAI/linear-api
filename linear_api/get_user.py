@@ -3,11 +3,12 @@ from .domain import LinearUser
 
 def fetch_linear_user(user_id: str, api_key: str) -> LinearUser:
     """
-    Fetches a Linear user by ID and returns a validated Pydantic model
+    Fetches a Linear user by ID and returns a validated Pydantic model with all available fields
     """
     query = """
     query GetUser($userId: String!) {
         user(id: $userId) {
+            # Basic fields
             id
             createdAt
             updatedAt
@@ -17,19 +18,38 @@ def fetch_linear_user(user_id: str, api_key: str) -> LinearUser:
             email
             avatarUrl
 
+            # Additional scalar fields
+            active
+            admin
+            app
+            avatarBackgroundColor
+            calendarHash
+            createdIssueCount
+            description
+            disableReason
+            guest
+            initials
+            inviteHash
+            isMe
+            lastSeen
+            statusEmoji
+            statusLabel
+            statusUntilAt
+            timezone
+            url
+
+            # Basic information about complex objects
+            organization {
+                id
+                name
+            }
+
+            # For connection types, we'll just get the basic structure
+            # without fetching all nodes to keep the query efficient
+            # We're not fetching these complex fields for now to keep the query simple
+            # and avoid potential errors with the GraphQL schema
         }
     }
-    """
-
-    # the stuff below needs debugging
-    """
-                settings {
-                id
-                createdAt
-                updatedAt
-                archivedAt
-                sidebarCollapsed
-            }
     """
 
     variables = {"userId": user_id}

@@ -13,6 +13,16 @@ from .domain import (
     LinearProject,
     LinearTeam,
     LinearAttachment,
+    IntegrationService,
+    SLADayCountType,
+    ActorBot,
+    Favorite,
+    Comment,
+    Cycle,
+    ProjectMilestone,
+    Template,
+    ExternalUser,
+    DocumentContent,
 )
 
 # Issue manipulation functions
