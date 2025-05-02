@@ -179,7 +179,7 @@ class IssueManager(BaseManager[LinearIssue]):
         # If we have metadata, create an attachment for it
         if issue.metadata is not None:
             attachment = LinearAttachmentInput(
-                url=f"urn:linear:metadata:{new_issue_id}",
+                url="http://example.com/metadata", # TODO ?
                 title=json.dumps(issue.metadata),
                 metadata=issue.metadata,
                 issueId=new_issue_id,
@@ -227,7 +227,7 @@ class IssueManager(BaseManager[LinearIssue]):
         # If we have metadata, create or update an attachment for it
         if update_data.metadata is not None:
             attachment = LinearAttachmentInput(
-                url=f"urn:linear:metadata:{issue_id}",
+                url="http://example.com/metadata",  # TODO ?
                 title=json.dumps(update_data.metadata),
                 metadata=update_data.metadata,
                 issueId=issue_id,
