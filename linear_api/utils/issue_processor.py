@@ -14,17 +14,7 @@ from ..domain import (
     LinearLabel,
     LinearProject,
     LinearTeam,
-    LinearPriority,
     LinearAttachment,
-    Favorite,
-    Comment,
-    Cycle,
-    ProjectMilestone,
-    Template,
-    ExternalUser,
-    DocumentContent,
-    ActorBot,
-    IntegrationService,
     ProjectStatus,
     ProjectStatusType,
     FrequencyResolutionType,
@@ -102,51 +92,11 @@ def process_issue_data(data: Dict[str, Any]) -> LinearIssue:
 
             data["project"] = LinearProject(**project_data)
 
-    if "creator" in data and data["creator"]:
-        data["creator"] = LinearUser(**data["creator"])
-
-    if "snoozedBy" in data and data["snoozedBy"]:
-        data["snoozedBy"] = LinearUser(**data["snoozedBy"])
-
-    if "externalUserCreator" in data and data["externalUserCreator"]:
-        data["externalUserCreator"] = ExternalUser(**data["externalUserCreator"])
-
-    if "botActor" in data and data["botActor"]:
-        data["botActor"] = ActorBot(**data["botActor"])
-
-    if "favorite" in data and data["favorite"]:
-        data["favorite"] = Favorite(**data["favorite"])
-
-    if "sourceComment" in data and data["sourceComment"]:
-        data["sourceComment"] = Comment(**data["sourceComment"])
-
-    if "cycle" in data and data["cycle"]:
-        data["cycle"] = Cycle(**data["cycle"])
-
-    if "projectMilestone" in data and data["projectMilestone"]:
-        data["projectMilestone"] = ProjectMilestone(**data["projectMilestone"])
-
-    if "lastAppliedTemplate" in data and data["lastAppliedTemplate"]:
-        data["lastAppliedTemplate"] = Template(**data["lastAppliedTemplate"])
-
-    if "recurringIssueTemplate" in data and data["recurringIssueTemplate"]:
-        data["recurringIssueTemplate"] = Template(**data["recurringIssueTemplate"])
-
-    if "documentContent" in data and data["documentContent"]:
-        data["documentContent"] = DocumentContent(**data["documentContent"])
-
-    # Process enums
-    if "priority" in data:
-        data["priority"] = LinearPriority(data["priority"])
-
-    if "integrationSourceType" in data and data["integrationSourceType"]:
-        data["integrationSourceType"] = IntegrationService(data["integrationSourceType"])
-
     # Handle reactionData - API might return a list instead of a dict
     if "reactionData" in data:
         if isinstance(data["reactionData"], list):
             # Convert to empty dict if it's an empty list
-            data["reactionData"] = {}
+            data["reactionData"] = {}  # TODO ?
 
     # Process datetime fields
     datetime_fields = [

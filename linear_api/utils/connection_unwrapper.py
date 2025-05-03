@@ -5,9 +5,9 @@ This module provides utility functions for automatically unwrapping GraphQL conn
 in API responses, handling pagination transparently.
 """
 
-from typing import Any, Dict, List, Optional, Set, Tuple, Callable
 import copy
 import logging
+from typing import Any, Dict, List, Optional, Callable
 
 logger = logging.getLogger(__name__)
 

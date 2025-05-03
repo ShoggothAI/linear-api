@@ -42,6 +42,7 @@ class ProjectManager(BaseManager[LinearProject]):
         query = """
         query GetProject($projectId: String!) {
             project(id: $projectId) {
+                # Basic fields
                 id
                 name
                 description
@@ -60,6 +61,64 @@ class ProjectManager(BaseManager[LinearProject]):
                 }
                 scope
                 frequencyResolution
+    
+                # Optional date fields
+                archivedAt
+                autoArchivedAt
+                canceledAt
+                completedAt
+                healthUpdatedAt
+                startedAt
+                projectUpdateRemindersPausedUntilAt
+    
+                # Optional content fields
+                content
+                contentState
+                health
+                icon
+                trashed
+    
+                # Optional numeric fields
+                updateReminderFrequency
+                updateReminderFrequencyInWeeks
+                updateRemindersHour
+    
+                # Optional complex fields
+                startDate
+                startDateResolution
+                targetDate
+                targetDateResolution
+                updateRemindersDay
+    
+                # Relationships
+                creator {
+                    id
+                    name
+                    displayName
+                    email
+                }
+                lead {
+                    id
+                    name
+                    displayName
+                    email
+                }
+                favorite {
+                    id
+                    createdAt
+                    updatedAt
+                }
+                lastAppliedTemplate {
+                    id
+                    name
+                }
+                documentContent {
+                    id
+                    content
+                }
+    
+                # We're not fetching complex connection fields to keep the query size manageable
+                # These would be populated if needed for specific use cases
             }
         }
         """

@@ -9,11 +9,6 @@ from typing import Dict, Any
 
 from ..domain import (
     LinearProject,
-    LinearUser,
-    ProjectStatus,
-    Favorite,
-    Template,
-    DocumentContent,
     TimelessDate,
 )
 
@@ -29,25 +24,7 @@ def process_project_data(data: Dict[str, Any]) -> LinearProject:
         A LinearProject object
     """
     # Process nested objects
-    if "creator" in data and data["creator"]:
-        data["creator"] = LinearUser(**data["creator"])
 
-    if "lead" in data and data["lead"]:
-        data["lead"] = LinearUser(**data["lead"])
-
-    if "favorite" in data and data["favorite"]:
-        data["favorite"] = Favorite(**data["favorite"])
-
-    if "lastAppliedTemplate" in data and data["lastAppliedTemplate"]:
-        data["lastAppliedTemplate"] = Template(**data["lastAppliedTemplate"])
-
-    if "documentContent" in data and data["documentContent"]:
-        data["documentContent"] = DocumentContent(**data["documentContent"])
-
-    if "status" in data and data["status"]:
-        data["status"] = ProjectStatus(**data["status"])
-
-    # Process datetime fields
     datetime_fields = [
         "createdAt", "updatedAt", "archivedAt", "autoArchivedAt",
         "canceledAt", "completedAt", "healthUpdatedAt", "startedAt",
