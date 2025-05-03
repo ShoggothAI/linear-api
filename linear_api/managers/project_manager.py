@@ -32,7 +32,7 @@ class ProjectManager(BaseManager[LinearProject]):
         Raises:
             ValueError: If the project doesn't exist
         """
-        # Используем упрощенный запрос
+        # Use a simplified query
         query = """
         query GetProject($projectId: String!) {
             project(id: $projectId) {
@@ -145,7 +145,6 @@ class ProjectManager(BaseManager[LinearProject]):
         }
         """
 
-        # Update the project
         response = self._execute_query(update_project_mutation, {"id": project_id, "input": kwargs})
 
         if not response or not response.get("projectUpdate", {}).get("success", False):
@@ -233,18 +232,18 @@ class ProjectManager(BaseManager[LinearProject]):
 
             project_nodes = response["projects"]["nodes"]
 
-        # Создаем базовые объекты LinearProject без запроса всех деталей
+        # Create basic LinearProject objects without requesting all details
         projects = {}
 
-        # Текущее время для значений по умолчанию
+        # Current time for default values
         current_time = datetime.now()
 
-        # Импортируем необходимые типы
+        # Import required types
         from ..domain import ProjectStatusType, FrequencyResolutionType
 
         for project_data in project_nodes:
             try:
-                # Добавляем необходимые поля со значениями по умолчанию
+                # Add required fields with default values
                 project_data.update({
                     "createdAt": current_time,
                     "updatedAt": current_time,
@@ -261,14 +260,11 @@ class ProjectManager(BaseManager[LinearProject]):
                     "frequencyResolution": FrequencyResolutionType.WEEKLY
                 })
 
-                # Преобразуем status в объект ProjectStatus
                 project_data["status"] = ProjectStatus(**project_data["status"])
 
-                # Создаем объект LinearProject
                 project = LinearProject(**project_data)
                 projects[project.id] = project
             except Exception as e:
-                # Логируем ошибку, но продолжаем с другими проектами
                 print(f"Error creating project from data {project_data}: {e}")
 
         return projects
@@ -287,18 +283,14 @@ class ProjectManager(BaseManager[LinearProject]):
         Raises:
             ValueError: If the project is not found
         """
-        # Проверяем, есть ли у нас кэш
         if not hasattr(self, '_project_name_cache'):
             self._project_name_cache = {}
 
-        # Создаем ключ кэша
         cache_key = (project_name, team_id)
 
-        # Проверяем, есть ли проект в кэше
         if cache_key in self._project_name_cache:
             return self._project_name_cache[cache_key]
 
-        # Если нет в кэше, получаем все проекты
         if team_id:
             query = """
             query GetProjectsByTeam($teamId: String!) {
@@ -338,15 +330,12 @@ class ProjectManager(BaseManager[LinearProject]):
 
             projects = response["projects"]["nodes"]
 
-        # Обновляем кэш
         for project in projects:
             if "name" in project and "id" in project:
                 self._project_name_cache[(project["name"], team_id)] = project["id"]
 
-        # Проверяем, есть ли теперь проект в кэше
         if cache_key in self._project_name_cache:
             return self._project_name_cache[cache_key]
 
-        # Если все еще не найден, генерируем ошибку
         team_info = f" in team {team_id}" if team_id else ""
         raise ValueError(f"Project '{project_name}'{team_info} not found")

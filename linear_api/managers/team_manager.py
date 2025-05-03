@@ -31,7 +31,7 @@ class TeamManager(BaseManager[LinearTeam]):
         Raises:
             ValueError: If the team doesn't exist
         """
-        # Используем упрощенный запрос с базовыми полями
+        # Use a simplified query with basic fields
         query = """
         query GetTeam($teamId: String!) {
             team(id: $teamId) {
@@ -107,11 +107,9 @@ class TeamManager(BaseManager[LinearTeam]):
         if not response or "teams" not in response or "nodes" not in response["teams"]:
             return {}
 
-        # Создаем простые объекты LinearTeam с минимальным набором полей
         teams = {}
         for team_data in response["teams"]["nodes"]:
             try:
-                # Создаем объект LinearTeam напрямую из базовых полей
                 team = LinearTeam(
                     id=team_data["id"],
                     name=team_data["name"],
@@ -120,7 +118,6 @@ class TeamManager(BaseManager[LinearTeam]):
                 )
                 teams[team.id] = team
             except Exception as e:
-                # Логируем ошибку, но продолжаем с другими командами
                 print(f"Error creating team from data {team_data}: {e}")
 
         return teams
@@ -138,15 +135,12 @@ class TeamManager(BaseManager[LinearTeam]):
         Raises:
             ValueError: If the team is not found
         """
-        # Проверяем, есть ли у нас кэш
         if not hasattr(self, '_team_name_cache'):
             self._team_name_cache = {}
 
-        # Проверяем, есть ли команда в кэше
         if team_name in self._team_name_cache:
             return self._team_name_cache[team_name]
 
-        # Если нет в кэше, получаем все команды
         query = """
         query {
             teams {
@@ -163,16 +157,13 @@ class TeamManager(BaseManager[LinearTeam]):
         if not response or "teams" not in response or "nodes" not in response["teams"]:
             raise ValueError("No teams found")
 
-        # Обновляем кэш
         for team in response["teams"]["nodes"]:
             if "name" in team and "id" in team:
                 self._team_name_cache[team["name"]] = team["id"]
 
-        # Проверяем, есть ли теперь команда в кэше
         if team_name in self._team_name_cache:
             return self._team_name_cache[team_name]
 
-        # Если все еще не найдена, генерируем ошибку
         raise ValueError(f"Team '{team_name}' not found")
 
     def get_states(self, team_id: str) -> List[LinearState]:
@@ -185,11 +176,9 @@ class TeamManager(BaseManager[LinearTeam]):
         Returns:
             A list of LinearState objects
         """
-        # Check if we have this cached
         if hasattr(self, '_state_cache') and team_id in self._state_cache:
             return self._state_cache[team_id]
 
-        # Otherwise, get the states from the API
         query = """
         query GetStates($teamId: ID!) {
             workflowStates(filter: { team: { id: { eq: $teamId } } }) {
@@ -212,12 +201,10 @@ class TeamManager(BaseManager[LinearTeam]):
         if not response or "workflowStates" not in response or "nodes" not in response["workflowStates"]:
             return []
 
-        # Convert to list of LinearState objects
         states = []
         for state_data in response["workflowStates"]["nodes"]:
             states.append(LinearState(**state_data))
 
-        # Cache the states
         self._cache_states(team_id, states)
 
         return states
