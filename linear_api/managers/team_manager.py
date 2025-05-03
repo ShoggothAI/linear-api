@@ -31,6 +31,11 @@ class TeamManager(BaseManager[LinearTeam]):
         Raises:
             ValueError: If the team doesn't exist
         """
+        # Check cache first
+        cached_team = self._cache_get("teams_by_id", team_id)
+        if cached_team:
+            return cached_team
+
         # Use a simplified query with basic fields
         query = """
         query GetTeam($teamId: String!) {
@@ -76,6 +81,9 @@ class TeamManager(BaseManager[LinearTeam]):
         # Create the team object
         team = LinearTeam(**team_data)
 
+        # Cache the team
+        self._cache_set("teams_by_id", team_id, team)
+
         # Cache states for this team
         self._cache_states(team_id, states)
 
@@ -88,7 +96,12 @@ class TeamManager(BaseManager[LinearTeam]):
         Returns:
             A dictionary mapping team IDs to LinearTeam objects
         """
-        # Используем простой запрос только для получения ID и имен
+        # Check cache first
+        cached_teams = self._cache_get("all_teams", "all")
+        if cached_teams:
+            return cached_teams
+
+        # Use a simple query only for obtaining IDs and names
         query = """
         query {
             teams {
@@ -117,8 +130,18 @@ class TeamManager(BaseManager[LinearTeam]):
                     description=team_data.get("description", "")
                 )
                 teams[team.id] = team
+
+                # Cache individual team
+                self._cache_set("teams_by_id", team.id, team)
+
+                # Cache team ID by name
+                self._cache_set("team_ids_by_name", team.name, team.id)
+
             except Exception as e:
                 print(f"Error creating team from data {team_data}: {e}")
+
+        # Cache all teams
+        self._cache_set("all_teams", "all", teams)
 
         return teams
 
@@ -135,11 +158,10 @@ class TeamManager(BaseManager[LinearTeam]):
         Raises:
             ValueError: If the team is not found
         """
-        if not hasattr(self, '_team_name_cache'):
-            self._team_name_cache = {}
-
-        if team_name in self._team_name_cache:
-            return self._team_name_cache[team_name]
+        # Check cache first
+        cached_id = self._cache_get("team_ids_by_name", team_name)
+        if cached_id:
+            return cached_id
 
         query = """
         query {
@@ -159,10 +181,13 @@ class TeamManager(BaseManager[LinearTeam]):
 
         for team in response["teams"]["nodes"]:
             if "name" in team and "id" in team:
-                self._team_name_cache[team["name"]] = team["id"]
+                # Cache all mappings for future use
+                self._cache_set("team_ids_by_name", team["name"], team["id"])
 
-        if team_name in self._team_name_cache:
-            return self._team_name_cache[team_name]
+        # Check cache again after populating it
+        cached_id = self._cache_get("team_ids_by_name", team_name)
+        if cached_id:
+            return cached_id
 
         raise ValueError(f"Team '{team_name}' not found")
 
@@ -176,8 +201,10 @@ class TeamManager(BaseManager[LinearTeam]):
         Returns:
             A list of LinearState objects
         """
-        if hasattr(self, '_state_cache') and team_id in self._state_cache:
-            return self._state_cache[team_id]
+        # Check cache first
+        cached_states = self._cache_get("states_by_team_id", team_id)
+        if cached_states:
+            return cached_states
 
         query = """
         query GetStates($teamId: ID!) {
@@ -205,6 +232,7 @@ class TeamManager(BaseManager[LinearTeam]):
         for state_data in response["workflowStates"]["nodes"]:
             states.append(LinearState(**state_data))
 
+        # Cache the states
         self._cache_states(team_id, states)
 
         return states
@@ -223,12 +251,20 @@ class TeamManager(BaseManager[LinearTeam]):
         Raises:
             ValueError: If the state is not found
         """
+        # Check cache first
+        cache_key = f"{team_id}:{state_name}"
+        cached_id = self._cache_get("state_ids_by_name", cache_key)
+        if cached_id:
+            return cached_id
+
         # Get all states for this team
         states = self.get_states(team_id)
 
         # Find the state with the matching name
         for state in states:
             if state.name == state_name:
+                # Cache the state ID
+                self._cache_set("state_ids_by_name", cache_key, state.id)
                 return state.id
 
         raise ValueError(f"State '{state_name}' not found in team {team_id}")
@@ -241,7 +277,17 @@ class TeamManager(BaseManager[LinearTeam]):
             team_id: The ID of the team
             states: The list of states to cache
         """
-        if not hasattr(self, '_state_cache'):
-            self._state_cache = {}
+        # Cache the full list of states
+        self._cache_set("states_by_team_id", team_id, states)
 
-        self._state_cache[team_id] = states
+        # Also cache individual state IDs by name for faster lookups
+        for state in states:
+            cache_key = f"{team_id}:{state.name}"
+            self._cache_set("state_ids_by_name", cache_key, state.id)
+
+    def invalidate_cache(self) -> None:
+        """
+        Invalidate all team-related caches.
+        This should be called after any mutating operations.
+        """
+        self._cache_clear()

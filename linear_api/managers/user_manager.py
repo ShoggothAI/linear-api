@@ -30,6 +30,11 @@ class UserManager(BaseManager[LinearUser]):
         Raises:
             ValueError: If the user doesn't exist
         """
+        # Check cache first
+        cached_user = self._cache_get("users_by_id", user_id)
+        if cached_user:
+            return cached_user
+
         query = """
         query GetUser($userId: String!) {
             user(id: $userId) {
@@ -77,7 +82,22 @@ class UserManager(BaseManager[LinearUser]):
         if not response or "user" not in response or not response["user"]:
             raise ValueError(f"User with ID {user_id} not found")
 
-        return LinearUser(**response["user"])
+        user = LinearUser(**response["user"])
+
+        # Cache the user
+        self._cache_set("users_by_id", user_id, user)
+
+        # Also cache the email mapping
+        if user.email:
+            self._cache_set("user_id_by_email", user.email, user.id)
+
+        # Also cache name mapping
+        if user.name:
+            self._cache_set("user_id_by_name", user.name, user.id)
+        if user.displayName:
+            self._cache_set("user_id_by_name", user.displayName, user.id)
+
+        return user
 
     def get_all(self) -> Dict[str, LinearUser]:
         """
@@ -86,6 +106,11 @@ class UserManager(BaseManager[LinearUser]):
         Returns:
             A dictionary mapping user IDs to LinearUser objects
         """
+        # Check cache first
+        cached_users = self._cache_get("all_users", "all")
+        if cached_users:
+            return cached_users
+
         # First, get all user IDs and emails
         query = """
         query {
@@ -112,6 +137,9 @@ class UserManager(BaseManager[LinearUser]):
                 # Log error but continue with other users
                 print(f"Error fetching user {user_obj['id']}: {e}")
 
+        # Cache all users
+        self._cache_set("all_users", "all", users)
+
         return users
 
     def get_email_map(self) -> Dict[str, str]:
@@ -121,6 +149,11 @@ class UserManager(BaseManager[LinearUser]):
         Returns:
             A dictionary mapping user IDs to email addresses
         """
+        # Check cache first
+        cached_map = self._cache_get("email_map", "all")
+        if cached_map:
+            return cached_map
+
         query = """
         query {
             users {
@@ -137,7 +170,16 @@ class UserManager(BaseManager[LinearUser]):
         if not response or "users" not in response or "nodes" not in response["users"]:
             return {}
 
-        return {user["id"]: user["email"] for user in response["users"]["nodes"]}
+        email_map = {user["id"]: user["email"] for user in response["users"]["nodes"]}
+
+        # Cache the email map
+        self._cache_set("email_map", "all", email_map)
+
+        # Also cache individual email to ID mappings
+        for user_id, email in email_map.items():
+            self._cache_set("user_id_by_email", email, user_id)
+
+        return email_map
 
     def get_id_by_email(self, email: str) -> str:
         """
@@ -152,6 +194,11 @@ class UserManager(BaseManager[LinearUser]):
         Raises:
             ValueError: If the user is not found
         """
+        # Check cache first
+        cached_id = self._cache_get("user_id_by_email", email)
+        if cached_id:
+            return cached_id
+
         # Get the email map
         email_map = self.get_email_map()
 
@@ -159,6 +206,8 @@ class UserManager(BaseManager[LinearUser]):
         id_map = {v: k for k, v in email_map.items()}
 
         if email in id_map:
+            # Cache the result
+            self._cache_set("user_id_by_email", email, id_map[email])
             return id_map[email]
 
         raise ValueError(f"User with email '{email}' not found")
@@ -178,12 +227,10 @@ class UserManager(BaseManager[LinearUser]):
         Raises:
             ValueError: If no matching user is found
         """
-        # Check if we have this cached
-        if hasattr(self, '_user_name_cache'):
-            if name in self._user_name_cache:
-                return self._user_name_cache[name]
-        else:
-            self._user_name_cache = {}
+        # Check cache first
+        cached_id = self._cache_get("user_id_by_name", name)
+        if cached_id:
+            return cached_id
 
         # Get all users
         query = """
@@ -206,14 +253,14 @@ class UserManager(BaseManager[LinearUser]):
         # First, look for exact matches
         for user in response["users"]["nodes"]:
             if user["name"] == name or user["displayName"] == name:
-                self._user_name_cache[name] = user["id"]
+                self._cache_set("user_id_by_name", name, user["id"])
                 return user["id"]
 
         # Then, look for case-insensitive matches
         name_lower = name.lower()
         for user in response["users"]["nodes"]:
             if user["name"].lower() == name_lower or user["displayName"].lower() == name_lower:
-                self._user_name_cache[name] = user["id"]
+                self._cache_set("user_id_by_name", name, user["id"])
                 return user["id"]
 
         # Then, look for partial matches
@@ -222,7 +269,7 @@ class UserManager(BaseManager[LinearUser]):
                     name_lower in user["name"].lower()
                     or name_lower in user["displayName"].lower()
             ):
-                self._user_name_cache[name] = user["id"]
+                self._cache_set("user_id_by_name", name, user["id"])
                 return user["id"]
 
         raise ValueError(f"No user found matching '{name}'")
@@ -234,6 +281,11 @@ class UserManager(BaseManager[LinearUser]):
         Returns:
             A LinearUser object representing the current user
         """
+        # Check cache first
+        cached_user = self._cache_get("current_user", "me")
+        if cached_user:
+            return cached_user
+
         query = """
         query {
             viewer {
@@ -248,4 +300,16 @@ class UserManager(BaseManager[LinearUser]):
             raise ValueError("Could not determine current user")
 
         # Get the full user details
-        return self.get(response["viewer"]["id"])
+        user = self.get(response["viewer"]["id"])
+
+        # Cache the current user
+        self._cache_set("current_user", "me", user)
+
+        return user
+
+    def invalidate_cache(self) -> None:
+        """
+        Invalidate all user-related caches.
+        This should be called after any mutating operations.
+        """
+        self._cache_clear()

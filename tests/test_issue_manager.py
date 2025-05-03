@@ -146,12 +146,13 @@ def test_delete_issue(client, test_team_name):
     # Delete the issue
     result = client.issues.delete(issue.id)
 
-    # Verify the issue was deleted
+    # Verify the deletion was successful
     assert result is True
 
-    # Verify the issue no longer exists
-    with pytest.raises(ValueError):
-        client.issues.get(issue.id)
+    # Verify the issue is marked as trashed
+    deleted_issue = client.issues.get(issue.id)
+    assert deleted_issue.trashed is True
+    assert deleted_issue.archivedAt is not None
 
 
 def test_get_by_team(client, test_team_name):

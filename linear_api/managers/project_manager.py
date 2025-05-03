@@ -8,7 +8,8 @@ from datetime import datetime
 from typing import Dict, Optional
 
 from .base_manager import BaseManager
-from ..domain import LinearProject, ProjectStatus
+from ..domain import LinearProject, ProjectStatus, FrequencyResolutionType, ProjectStatusType
+from ..utils import process_project_data
 
 
 class ProjectManager(BaseManager[LinearProject]):
@@ -32,6 +33,11 @@ class ProjectManager(BaseManager[LinearProject]):
         Raises:
             ValueError: If the project doesn't exist
         """
+        # Check cache first
+        cached_project = self._cache_get("projects_by_id", project_id)
+        if cached_project:
+            return cached_project
+
         # Use a simplified query
         query = """
         query GetProject($projectId: String!) {
@@ -64,8 +70,10 @@ class ProjectManager(BaseManager[LinearProject]):
             raise ValueError(f"Project with ID {project_id} not found")
 
         # Convert the response to a LinearProject object
-        from ..utils.project_processor import process_project_data
         project = process_project_data(response["project"])
+
+        # Cache the project
+        self._cache_set("projects_by_id", project_id, project)
 
         return project
 
@@ -112,6 +120,10 @@ class ProjectManager(BaseManager[LinearProject]):
         if not response or not response.get("projectCreate", {}).get("success", False):
             raise ValueError(f"Failed to create project '{name}' in team '{team_name}'")
 
+        # Invalidate caches after creation
+        self._cache_clear()
+        self.client.teams._cache_invalidate("all_teams", "all")  # Also invalidate team cache
+
         # Return the full project object
         project_id = response["projectCreate"]["project"]["id"]
         return self.get(project_id)
@@ -150,6 +162,10 @@ class ProjectManager(BaseManager[LinearProject]):
         if not response or not response.get("projectUpdate", {}).get("success", False):
             raise ValueError(f"Failed to update project with ID: {project_id}")
 
+        # Invalidate caches after update
+        self._cache_invalidate("projects_by_id", project_id)
+        self._cache_clear("all_projects")
+
         # Return the updated project
         return self.get(project_id)
 
@@ -179,6 +195,11 @@ class ProjectManager(BaseManager[LinearProject]):
         if not response or not response.get("projectDelete", {}).get("success", False):
             raise ValueError(f"Failed to delete project with ID: {project_id}")
 
+        # Invalidate caches after deletion
+        self._cache_invalidate("projects_by_id", project_id)
+        self._cache_clear("all_projects")
+        self._cache_clear("project_ids_by_name")
+
         return True
 
     def get_all(self, team_id: Optional[str] = None) -> Dict[str, LinearProject]:
@@ -191,6 +212,12 @@ class ProjectManager(BaseManager[LinearProject]):
         Returns:
             A dictionary mapping project IDs to LinearProject objects
         """
+        # Check cache first
+        cache_key = f"team_{team_id}" if team_id else "all"
+        cached_projects = self._cache_get("all_projects", cache_key)
+        if cached_projects:
+            return cached_projects
+
         if team_id:
             query = """
             query GetProjectsByTeam($teamId: String!) {
@@ -238,9 +265,6 @@ class ProjectManager(BaseManager[LinearProject]):
         # Current time for default values
         current_time = datetime.now()
 
-        # Import required types
-        from ..domain import ProjectStatusType, FrequencyResolutionType
-
         for project_data in project_nodes:
             try:
                 # Add required fields with default values
@@ -264,8 +288,18 @@ class ProjectManager(BaseManager[LinearProject]):
 
                 project = LinearProject(**project_data)
                 projects[project.id] = project
+
+                # Cache individual project
+                self._cache_set("projects_by_id", project.id, project)
+
+                # Cache project ID by name
+                self._cache_set("project_ids_by_name", (project.name, team_id), project.id)
+
             except Exception as e:
                 print(f"Error creating project from data {project_data}: {e}")
+
+        # Cache all projects
+        self._cache_set("all_projects", cache_key, projects)
 
         return projects
 
@@ -283,13 +317,11 @@ class ProjectManager(BaseManager[LinearProject]):
         Raises:
             ValueError: If the project is not found
         """
-        if not hasattr(self, '_project_name_cache'):
-            self._project_name_cache = {}
-
+        # Check cache first
         cache_key = (project_name, team_id)
-
-        if cache_key in self._project_name_cache:
-            return self._project_name_cache[cache_key]
+        cached_id = self._cache_get("project_ids_by_name", cache_key)
+        if cached_id:
+            return cached_id
 
         if team_id:
             query = """
@@ -330,12 +362,22 @@ class ProjectManager(BaseManager[LinearProject]):
 
             projects = response["projects"]["nodes"]
 
+        # Cache all project IDs by name
         for project in projects:
             if "name" in project and "id" in project:
-                self._project_name_cache[(project["name"], team_id)] = project["id"]
+                self._cache_set("project_ids_by_name", (project["name"], team_id), project["id"])
 
-        if cache_key in self._project_name_cache:
-            return self._project_name_cache[cache_key]
+        # Check cache again after populating it
+        cached_id = self._cache_get("project_ids_by_name", cache_key)
+        if cached_id:
+            return cached_id
 
         team_info = f" in team {team_id}" if team_id else ""
         raise ValueError(f"Project '{project_name}'{team_info} not found")
+
+    def invalidate_cache(self) -> None:
+        """
+        Invalidate all project-related caches.
+        This should be called after any mutating operations.
+        """
+        self._cache_clear()

@@ -17,6 +17,7 @@ from ..domain import (
     LinearAttachmentInput,
     LinearPriority,
 )
+from ..utils import process_issue_data
 
 
 class IssueManager(BaseManager[LinearIssue]):
@@ -41,6 +42,11 @@ class IssueManager(BaseManager[LinearIssue]):
         Raises:
             ValueError: If the issue doesn't exist
         """
+        # Check cache first
+        cached_issue = self._cache_get("issues_by_id", issue_id)
+        if cached_issue:
+            return cached_issue
+
         query = """
         query GetIssueWithAttachments($issueId: String!) {
             issue(id: $issueId) {
@@ -130,8 +136,10 @@ class IssueManager(BaseManager[LinearIssue]):
             raise ValueError(f"Issue with ID {issue_id} not found")
 
         # Process the response using the existing _process_issue_data function
-        from ..utils.issue_processor import process_issue_data
         issue = process_issue_data(response["issue"])
+
+        # Cache the issue
+        self._cache_set("issues_by_id", issue_id, issue)
 
         return issue
 
@@ -173,14 +181,23 @@ class IssueManager(BaseManager[LinearIssue]):
 
         new_issue_id = response["issueCreate"]["issue"]["id"]
 
+        # Invalidate relevant caches after creation
+        self._cache_clear("issues_by_team")
+        if issue.projectName:
+            project_id = self.client.projects.get_id_by_name(issue.projectName, team_id)
+            self._cache_invalidate("issues_by_project", project_id)
+        self._cache_clear("all_issues")
+
         # If we have a parent ID, set the parent-child relationship
         if issue.parentId is not None:
             self._set_parent_issue(new_issue_id, issue.parentId)
+            # Invalidate parent issue cache
+            self._cache_invalidate("issues_by_id", issue.parentId)
 
         # If we have metadata, create an attachment for it
         if issue.metadata is not None:
             attachment = LinearAttachmentInput(
-                url=issue.metadata.get("url", ""), # TODO ?
+                url=issue.metadata.get("url", ""),  # TODO ?
                 title=json.dumps(issue.metadata),
                 metadata=issue.metadata,
                 issueId=new_issue_id,
@@ -225,6 +242,20 @@ class IssueManager(BaseManager[LinearIssue]):
         if not response or "issueUpdate" not in response or not response["issueUpdate"]["success"]:
             raise ValueError(f"Failed to update issue with ID: {issue_id}")
 
+        # Invalidate caches after update
+        self._cache_invalidate("issues_by_id", issue_id)
+
+        # If team or project was changed, invalidate those caches too
+        if hasattr(update_data, "teamName") and update_data.teamName:
+            self._cache_clear("issues_by_team")
+        if hasattr(update_data, "projectName") and update_data.projectName:
+            # We can't know which project it was moved from/to, so clear all project caches
+            self._cache_clear("issues_by_project")
+
+        # If parent was changed, invalidate parent cache
+        if hasattr(update_data, "parentId") and update_data.parentId:
+            self._cache_invalidate("issues_by_id", update_data.parentId)
+
         # If we have metadata, create or update an attachment for it
         if update_data.metadata is not None:
             attachment = LinearAttachmentInput(
@@ -251,6 +282,15 @@ class IssueManager(BaseManager[LinearIssue]):
         Raises:
             ValueError: If the issue doesn't exist or can't be deleted
         """
+        # Get the issue to find its team and project before deletion
+        try:
+            issue = self.get(issue_id)
+            team_id = issue.team.id if issue.team else None
+            project_id = issue.project.id if issue.project else None
+        except:
+            team_id = None
+            project_id = None
+
         mutation = """
         mutation DeleteIssue($issueId: String!) {
             issueDelete(id: $issueId) {
@@ -263,6 +303,14 @@ class IssueManager(BaseManager[LinearIssue]):
 
         if not response or not response.get("issueDelete", {}).get("success", False):
             raise ValueError(f"Failed to delete issue with ID: {issue_id}")
+
+        # Invalidate caches after deletion
+        self._cache_invalidate("issues_by_id", issue_id)
+        if team_id:
+            self._cache_invalidate("issues_by_team", team_id)
+        if project_id:
+            self._cache_invalidate("issues_by_project", project_id)
+        self._cache_clear("all_issues")
 
         return True
 
@@ -281,6 +329,11 @@ class IssueManager(BaseManager[LinearIssue]):
         """
         # Convert team name to ID
         team_id = self.client.teams.get_id_by_name(team_name)
+
+        # Check cache first
+        cached_issues = self._cache_get("issues_by_team", team_id)
+        if cached_issues:
+            return cached_issues
 
         # GraphQL query with pagination support
         query = """
@@ -314,6 +367,9 @@ class IssueManager(BaseManager[LinearIssue]):
                 # Log error but continue with other issues
                 print(f"Error fetching issue {issue_obj['id']}: {e}")
 
+        # Cache the result
+        self._cache_set("issues_by_team", team_id, issues)
+
         return issues
 
     def get_by_project(self, project_id: str) -> Dict[str, LinearIssue]:
@@ -326,6 +382,11 @@ class IssueManager(BaseManager[LinearIssue]):
         Returns:
             A dictionary mapping issue IDs to LinearIssue objects
         """
+        # Check cache first
+        cached_issues = self._cache_get("issues_by_project", project_id)
+        if cached_issues:
+            return cached_issues
+
         query = """
         query($projectId: String!, $cursor: String) {
           project(id: $projectId) {
@@ -359,6 +420,9 @@ class IssueManager(BaseManager[LinearIssue]):
                 # Log error but continue with other issues
                 print(f"Error fetching issue {issue_obj['id']}: {e}")
 
+        # Cache the result
+        self._cache_set("issues_by_project", project_id, issues)
+
         return issues
 
     def get_all(self) -> Dict[str, LinearIssue]:
@@ -368,6 +432,11 @@ class IssueManager(BaseManager[LinearIssue]):
         Returns:
             A dictionary mapping issue IDs to LinearIssue objects
         """
+        # Check cache first
+        cached_issues = self._cache_get("all_issues", "all")
+        if cached_issues:
+            return cached_issues
+
         query = """
         query($cursor: String) {
           issues(first: 100, after: $cursor) {
@@ -406,6 +475,9 @@ class IssueManager(BaseManager[LinearIssue]):
                 except Exception as e:
                     # Log error but continue with other issues
                     print(f"Error fetching issue {issue_id}: {e}")
+
+        # Cache the result
+        self._cache_set("all_issues", "all", issues)
 
         return issues
 
@@ -457,7 +529,12 @@ class IssueManager(BaseManager[LinearIssue]):
             }
         }
 
-        return self._execute_query(mutation, variables)
+        response = self._execute_query(mutation, variables)
+
+        # Invalidate issue cache after adding attachment
+        self._cache_invalidate("issues_by_id", attachment.issueId)
+
+        return response
 
     def get_attachments(self, issue_id: str) -> List[Dict[str, Any]]:
         """
@@ -469,6 +546,11 @@ class IssueManager(BaseManager[LinearIssue]):
         Returns:
             A list of attachment data
         """
+        # Check cache first
+        cached_attachments = self._cache_get("attachments_by_issue", issue_id)
+        if cached_attachments:
+            return cached_attachments
+
         query = """
         query($issueId: String!) {
           issue(id: $issueId) {
@@ -490,7 +572,10 @@ class IssueManager(BaseManager[LinearIssue]):
         response = self._execute_query(query, {"issueId": issue_id})
 
         if response and "issue" in response and response["issue"] and "attachments" in response["issue"]:
-            return response["issue"]["attachments"]["nodes"]
+            attachments = response["issue"]["attachments"]["nodes"]
+            # Cache the result
+            self._cache_set("attachments_by_issue", issue_id, attachments)
+            return attachments
 
         return []
 
@@ -504,6 +589,11 @@ class IssueManager(BaseManager[LinearIssue]):
         Returns:
             A list of comment data
         """
+        # Check cache first
+        cached_comments = self._cache_get("comments_by_issue", issue_id)
+        if cached_comments:
+            return cached_comments
+
         query = """
         query($issueId: String!) {
           issue(id: $issueId) {
@@ -525,7 +615,10 @@ class IssueManager(BaseManager[LinearIssue]):
         response = self._execute_query(query, {"issueId": issue_id})
 
         if response and "issue" in response and response["issue"] and "comments" in response["issue"]:
-            return response["issue"]["comments"]["nodes"]
+            comments = response["issue"]["comments"]["nodes"]
+            # Cache the result
+            self._cache_set("comments_by_issue", issue_id, comments)
+            return comments
 
         return []
 
@@ -539,6 +632,11 @@ class IssueManager(BaseManager[LinearIssue]):
         Returns:
             A list of history items
         """
+        # Check cache first
+        cached_history = self._cache_get("history_by_issue", issue_id)
+        if cached_history:
+            return cached_history
+
         query = """
         query($issueId: String!) {
           issue(id: $issueId) {
@@ -569,7 +667,10 @@ class IssueManager(BaseManager[LinearIssue]):
         response = self._execute_query(query, {"issueId": issue_id})
 
         if response and "issue" in response and response["issue"] and "history" in response["issue"]:
-            return response["issue"]["history"]["nodes"]
+            history = response["issue"]["history"]["nodes"]
+            # Cache the result
+            self._cache_set("history_by_issue", issue_id, history)
+            return history
 
         return []
 
@@ -599,10 +700,16 @@ class IssueManager(BaseManager[LinearIssue]):
         }
         """
 
-        return self._execute_query(
+        response = self._execute_query(
             mutation,
             {"id": child_id, "input": {"parentId": parent_id}}
         )
+
+        # Invalidate caches for both parent and child issues
+        self._cache_invalidate("issues_by_id", child_id)
+        self._cache_invalidate("issues_by_id", parent_id)
+
+        return response
 
     def _build_issue_input_vars(self, issue: LinearIssueInput, team_id: str) -> Dict[str, Any]:
         """
@@ -731,3 +838,10 @@ class IssueManager(BaseManager[LinearIssue]):
         input_vars.update(update_dict)
 
         return input_vars
+
+    def invalidate_cache(self) -> None:
+        """
+        Invalidate all issue-related caches.
+        This should be called after any mutating operations.
+        """
+        self._cache_clear()
