@@ -119,16 +119,16 @@ def test_delete_project(client, test_team_name):
         description="This project will be deleted"
     )
 
-    team_id = client.teams.get_id_by_name(test_team_name)
-    project_id = project.id
     # Delete the project
     result = client.projects.delete(project.id)
 
     # Verify the project was deleted
     assert result is True
 
-    team_projects = client.projects.get_all(team_id=team_id)
-    assert project_id not in team_projects, "Deleted project still appears in team projects"
+    # Verify the project is marked as trashed
+    deleted_project = client.projects.get(project.id)
+    assert deleted_project.trashed is True
+    assert deleted_project.archivedAt is not None
 
 
 def test_get_all_projects(client, test_team_name):
