@@ -7,6 +7,7 @@ This module provides the IssueManager class for working with Linear issues.
 import json
 from datetime import datetime
 from typing import Dict, List, Any
+from urllib.parse import urlparse
 
 from .base_manager import BaseManager
 from ..domain import (
@@ -179,7 +180,7 @@ class IssueManager(BaseManager[LinearIssue]):
         # If we have metadata, create an attachment for it
         if issue.metadata is not None:
             attachment = LinearAttachmentInput(
-                url="http://example.com/metadata", # TODO ?
+                url=issue.metadata.get("url", ""), # TODO ?
                 title=json.dumps(issue.metadata),
                 metadata=issue.metadata,
                 issueId=new_issue_id,
@@ -227,7 +228,7 @@ class IssueManager(BaseManager[LinearIssue]):
         # If we have metadata, create or update an attachment for it
         if update_data.metadata is not None:
             attachment = LinearAttachmentInput(
-                url="http://example.com/metadata",  # TODO ?
+                url=update_data.metadata.get("url", ""),  # TODO ?
                 title=json.dumps(update_data.metadata),
                 metadata=update_data.metadata,
                 issueId=issue_id,
@@ -418,6 +419,19 @@ class IssueManager(BaseManager[LinearIssue]):
         Returns:
             The created attachment data
         """
+
+        def is_valid_url(url):
+            if not url:
+                return False
+            try:
+                result = urlparse(url)
+                return all([result.scheme in ['http', 'https'], result.netloc])
+            except:
+                return False
+
+        if not is_valid_url(attachment.url):
+            attachment.url = f"https://linear.app/issue/{attachment.issueId}"
+
         mutation = """
         mutation CreateAttachment($input: AttachmentCreateInput!) {
             attachmentCreate(input: $input) {
