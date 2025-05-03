@@ -12,7 +12,7 @@ from .managers.issue_manager import IssueManager
 from .managers.project_manager import ProjectManager
 from .managers.team_manager import TeamManager
 from .managers.user_manager import UserManager
-from .schema_validator import validate_all_models
+from .schema_validator import validate_model
 from .utils.api import call_linear_api
 
 
@@ -81,7 +81,9 @@ class LinearClient:
         """
         return call_linear_api(query, api_key=self.api_key)
 
-    def execute_graphql(self, query: str, variables: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    def execute_graphql(
+        self, query: str, variables: Optional[Dict[str, Any]] = None
+    ) -> Dict[str, Any]:
         """
         Execute a GraphQL query with variables.
 
@@ -98,11 +100,13 @@ class LinearClient:
 
         return self.call_api(request)
 
-    def validate_schema(self) -> Dict[str, Dict[str, Any]]:
+    def validate_schema(
+        self, model_class: type, graphql_type_name: str
+    ) -> Dict[str, Dict[str, Any]]:
         """
         Validate the domain models against the GraphQL schema.
 
         Returns:
             A dictionary mapping model names to validation results
         """
-        return validate_all_models()
+        return validate_model(model_class, graphql_type_name, api_key=self.api_key)
