@@ -17,14 +17,13 @@ class LinearModel(BaseModel):
     the corresponding GraphQL type name in the Linear API,
     and excludes this from serialization.
     """
+
     # Class variable for the GraphQL type name
     linear_class_name: ClassVar[str] = ""
 
     # Configuration to exclude class variables from serialization
     model_config = ConfigDict(
-        extra="allow",  # Allow extra fields not defined in the model
         populate_by_name=True,  # Allow populating by field name and alias
-        arbitrary_types_allowed=True,  # Allow arbitrary types
         exclude={"linear_class_name"},  # Exclude class variables from serialization
     )
 
@@ -69,6 +68,7 @@ T = TypeVar("T")
 
 class Connection(LinearModel, Generic[T]):
     """Generic connection model for paginated results"""
+
     linear_class_name: ClassVar[str] = "Connection"
 
     nodes: List[T] = Field(default_factory=list)
