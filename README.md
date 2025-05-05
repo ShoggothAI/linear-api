@@ -254,6 +254,35 @@ user_id = client.users.get_id_by_name("John Doe")
 print(f"User ID: {user_id}")
 ```
 
+## Working with Deleted Items
+
+Linear API uses a "soft delete" approach where objects (issues, projects, and other entities) are not physically removed from the database. Instead, they are marked with a `trashed` flag to indicate they're in the "trash bin".
+
+When you call a `delete()` method for an issue or project:
+```python
+# Delete (move to trash) an issue
+client.issues.delete(issue_id)
+
+# Delete (move to trash) a project
+client.projects.delete(project_id)
+```
+
+The object is not physically deleted, but marked as `trashed=True` and an `archivedAt` attribute is set with the time when the object was placed in the trash bin.
+
+This allows for recovery of objects from the trash if needed through the Linear interface. When developing with the API, it's important to understand that deleted objects are still accessible through the API and can be retrieved via `get()`, `get_all()`, and other methods.
+
+To programmatically check if an object is in the trash bin, you can use the following approach:
+
+```python
+# Check object status
+issue = client.issues.get(issue_id)
+if issue.trashed:
+    print("Issue is in the trash bin")
+    print(f"Deletion time: {issue.archivedAt}")
+else:
+    print("Issue is active")
+```
+
 ## Authentication
 
 Set your Linear API key as an environment variable:
