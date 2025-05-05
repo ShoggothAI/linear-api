@@ -10,7 +10,7 @@ import inspect
 import os
 
 from pydantic import BaseModel
-
+from linear_api.domain.base_domain import LinearModel
 from linear_api.domain import (
     LinearIssue,
     LinearUser,
@@ -66,7 +66,7 @@ def get_schema_for_type(type_name: str, api_key: str) -> Dict[str, Any]:
     return response["__type"]
 
 
-def get_model_fields(model_class: type) -> Set[str]:
+def get_model_fields(model_class: type[LinearModel]) -> Set[str]:
     """
     Get all field names from a Pydantic model.
 
@@ -84,14 +84,13 @@ def get_model_fields(model_class: type) -> Set[str]:
 
 
 def compare_fields(
-    model_class: type, graphql_type_name: str, api_key: str
+    model_class: type[LinearModel], api_key: str
 ) -> Tuple[Set[str], Set[str], Set[str]]:
     """
     Compare fields between a Pydantic model and a GraphQL type.
 
     Args:
         model_class: The Pydantic model class to check
-        graphql_type_name: The name of the GraphQL type to compare against
         api_key: The Linear API key for authentication
 
     Returns:
@@ -102,6 +101,9 @@ def compare_fields(
     """
     # Get model fields
     model_fields = get_model_fields(model_class)
+
+    # Get GraphQL type name from the model class
+    graphql_type_name = model_class.linear_class_name
 
     # Get GraphQL type fields
     graphql_schema = get_schema_for_type(graphql_type_name, api_key=api_key)
@@ -119,20 +121,20 @@ def compare_fields(
     return common_fields, missing_in_model, extra_in_model
 
 
-def validate_model(model_class: type, graphql_type_name: str, api_key: str) -> Dict[str, Any]:
+def validate_model(model_class: type[LinearModel], api_key: str) -> Dict[str, Any]:
     """
     Validate a Pydantic model against a GraphQL type.
 
     Args:
         model_class: The Pydantic model class to validate
-        graphql_type_name: The name of the GraphQL type to validate against
         api_key: The Linear API key for authentication
 
     Returns:
         A dictionary containing validation results
     """
+    graphql_type_name = model_class.linear_class_name
     try:
-        common, missing, extra = compare_fields(model_class, graphql_type_name, api_key=api_key)
+        common, missing, extra = compare_fields(model_class, api_key=api_key)
 
         return {
             "model_name": model_class.__name__,
@@ -162,29 +164,29 @@ def validate_all_models(api_key: str) -> Dict[str, Dict[str, Any]]:
     Returns:
         A dictionary mapping model names to validation results
     """
-    # Define mapping between model classes and GraphQL type names
-    model_to_graphql = {
-        LinearIssue: "Issue",
-        LinearUser: "User",
-        LinearState: "WorkflowState",
-        LinearLabel: "IssueLabel",
-        LinearProject: "Project",
-        LinearTeam: "Team",
-        LinearAttachment: "Attachment",
-    }
+    # List of model classes to validate
+    models_to_validate = [
+        LinearIssue,
+        LinearUser,
+        LinearState,
+        LinearLabel,
+        LinearProject,
+        LinearTeam,
+        LinearAttachment,
+    ]
 
     results = {}
 
-    for model_class, graphql_type in model_to_graphql.items():
+    for model_class in models_to_validate:
         try:
             results[model_class.__name__] = validate_model(
-                model_class, graphql_type, api_key=api_key
+                model_class, api_key=api_key
             )
         except Exception as e:
             results[model_class.__name__] = {
                 "error": str(e),
                 "model_name": model_class.__name__,
-                "graphql_type": graphql_type,
+                "graphql_type": model_class.linear_class_name,
             }
 
     return results
@@ -255,24 +257,26 @@ def get_field_details(graphql_type_name: str, api_key: str) -> Dict[str, Dict[st
     return field_details
 
 
-def suggest_model_improvements(model_class: type, graphql_type_name: str, api_key: str) -> str:
+def suggest_model_improvements(
+    model_class: type[LinearModel], api_key: str
+) -> str:
     """
     Generate suggestions for improving a model based on missing fields.
 
     Args:
         model_class: The Pydantic model class to improve
-        graphql_type_name: The name of the GraphQL type to compare against
         api_key: The Linear API key for authentication
 
     Returns:
         A string containing suggested code improvements
     """
-    _, missing, _ = compare_fields(model_class, graphql_type_name, api_key=api_key)
+    _, missing, _ = compare_fields(model_class, api_key=api_key)
 
     if not missing:
         return f"# {model_class.__name__} is already complete!"
 
-    field_details = get_field_details(graphql_type_name)
+    graphql_type_name = model_class.linear_class_name
+    field_details = get_field_details(graphql_type_name, api_key=api_key)
     suggestions = [f"# Suggested improvements for {model_class.__name__}:"]
 
     for field in sorted(missing):
@@ -315,5 +319,5 @@ if __name__ == "__main__":
 
     # Generate improvement suggestions for a specific model
     print("Generating improvement suggestions for LinearProject:")
-    suggestions = suggest_model_improvements(LinearProject, "Project", api_key=api_key)
+    suggestions = suggest_model_improvements(LinearProject, api_key=api_key)
     print(suggestions)

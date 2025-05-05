@@ -8,6 +8,8 @@ This module provides the main entry point for the Linear API library.
 import os
 from typing import Optional, Dict, Any
 
+from .domain.base_domain import LinearModel
+
 from .managers.cache_manager import CacheManager
 from .managers.issue_manager import IssueManager
 from .managers.project_manager import ProjectManager
@@ -49,8 +51,13 @@ class LinearClient:
         ```
     """
 
-    def __init__(self, api_key: Optional[str] = None, enable_cache: bool = True,
-                 cache_ttl: int = 3600, auto_unwrap_connections: bool = True):
+    def __init__(
+        self,
+        api_key: Optional[str] = None,
+        enable_cache: bool = True,
+        cache_ttl: int = 3600,
+        auto_unwrap_connections: bool = True,
+    ):
         """
         Initialize the Linear API client.
 
@@ -100,7 +107,7 @@ class LinearClient:
         return call_linear_api(query, api_key=self.api_key)
 
     def execute_graphql(
-            self, query: str, variables: Optional[Dict[str, Any]] = None
+        self, query: str, variables: Optional[Dict[str, Any]] = None
     ) -> Dict[str, Any]:
         """
         Execute a GraphQL query with variables.
@@ -118,16 +125,14 @@ class LinearClient:
 
         return self.call_api(request)
 
-    def validate_schema(
-            self, model_class: type, graphql_type_name: str
-    ) -> Dict[str, Dict[str, Any]]:
+    def validate_schema(self, model_class: type[LinearModel]) -> Dict[str, Dict[str, Any]]:
         """
         Validate the domain models against the GraphQL schema.
 
         Returns:
             A dictionary mapping model names to validation results
         """
-        return validate_model(model_class, graphql_type_name, api_key=self.api_key)
+        return validate_model(model_class, api_key=self.api_key)
 
     def clear_cache(self, cache_name: Optional[str] = None) -> None:
         """

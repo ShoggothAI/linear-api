@@ -5,6 +5,7 @@ A well-organized client for interacting with the Linear API.
 """
 
 from .client import LinearClient
+
 from .domain import (
     # Common models
     LinearIssue,
@@ -14,12 +15,10 @@ from .domain import (
     LinearState,
     LinearLabel,
     LinearAttachment,
-
     # Input models
     LinearIssueInput,
     LinearIssueUpdateInput,
     LinearAttachmentInput,
-
     # Enums
     LinearPriority,
     IntegrationService,
@@ -27,11 +26,10 @@ from .domain import (
     ProjectStatusType,
 )
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 __all__ = [
     # Main client
     "LinearClient",
-
     # Common models
     "LinearIssue",
     "LinearProject",
@@ -40,12 +38,10 @@ __all__ = [
     "LinearState",
     "LinearLabel",
     "LinearAttachment",
-
     # Input models
     "LinearIssueInput",
     "LinearIssueUpdateInput",
     "LinearAttachmentInput",
-
     # Enums
     "LinearPriority",
     "IntegrationService",

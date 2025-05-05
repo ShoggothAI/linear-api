@@ -62,7 +62,9 @@ client.disable_connection_unwrapping()  # Disable automatic connection unwrappin
 client.enable_connection_unwrapping()   # Enable automatic connection unwrapping
 ```
 
-The `auto_unwrap_connections` parameter controls whether the client automatically handles GraphQL connection patterns and pagination. When enabled (default), the client will automatically make additional API calls to fetch all pages of data when it encounters a GraphQL connection pattern in the response. This makes working with large datasets much easier as you don't need to manually handle pagination.
+The `auto_unwrap_connections` parameter controls whether the client automatically handles GraphQL connection patterns and pagination. 
+When enabled (default), the client will automatically make additional API calls to fetch all pages of data when it encounters a 
+GraphQL connection pattern in the response. This makes working with large datasets much easier as you don't need to manually handle pagination.
 
 ### Complete Workflow Example
 
