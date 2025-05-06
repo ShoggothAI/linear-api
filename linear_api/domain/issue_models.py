@@ -10,13 +10,8 @@ from typing import Optional, Dict, Union, List, Any, ClassVar
 from pydantic import Field
 
 from .base_domain import LinearModel
-from .common_models import (
-    DocumentContent, Comment, Favorite, Template,
-    ActorBot, ExternalUser
-)
-from .enums import (
-    LinearPriority, SLADayCountType, IntegrationService
-)
+from .common_models import DocumentContent, Comment, Favorite, Template, ActorBot, ExternalUser
+from .enums import LinearPriority, SLADayCountType, IntegrationService
 from .project_models import LinearProject, ProjectMilestone, Cycle
 from .team_models import LinearTeam, LinearState
 from .user_models import LinearUser
@@ -26,6 +21,7 @@ class LinearLabel(LinearModel):
     """
     Represents a label in Linear.
     """
+
     linear_class_name: ClassVar[str] = "IssueLabel"
 
     id: str
@@ -37,7 +33,9 @@ class LinearAttachment(LinearModel):
     """
     Represents an attachment in Linear.
     """
+
     linear_class_name: ClassVar[str] = "Attachment"
+    known_extra_fields: ClassVar[List[str]] = ["issueId"]
 
     id: str  # Unique identifier for the attachment
     url: str  # URL or resource identifier for the attachment
@@ -53,6 +51,7 @@ class LinearAttachmentInput(LinearModel):
     """
     Input for creating an attachment in Linear.
     """
+
     linear_class_name: ClassVar[str] = "AttachmentInput"
 
     url: str
@@ -66,7 +65,10 @@ class LinearIssue(LinearModel):
     """
     Represents a complete issue retrieved from Linear.
     """
+
     linear_class_name: ClassVar[str] = "Issue"
+    known_extra_fields: ClassVar[List[str]] = ["parentId"]
+    known_missing_fields: ClassVar[List[str]] = ["parent"]
 
     # Required fields
     id: str
@@ -154,6 +156,7 @@ class LinearIssueInput(LinearModel):
     """
     Represents the input for creating a new issue in Linear.
     """
+
     linear_class_name: ClassVar[str] = "IssueCreateInput"
 
     # Required fields
@@ -195,6 +198,7 @@ class LinearIssueUpdateInput(LinearModel):
     Represents the input for updating an existing issue in Linear.
     All fields are optional since you only need to specify the fields you want to update.
     """
+
     linear_class_name: ClassVar[str] = "IssueUpdateInput"
 
     # Common fields

@@ -20,11 +20,17 @@ class LinearModel(BaseModel):
 
     # Class variable for the GraphQL type name
     linear_class_name: ClassVar[str] = ""
+    known_missing_fields: ClassVar[List[str]] = []
+    known_extra_fields: ClassVar[List[str]] = []
 
     # Configuration to exclude class variables from serialization
     model_config = ConfigDict(
         populate_by_name=True,  # Allow populating by field name and alias
-        exclude={"linear_class_name"},  # Exclude class variables from serialization
+        exclude={
+            "linear_class_name",
+            "known_missing_fields",
+            "known_extra_fields",
+        },  # Exclude class variables from serialization
     )
 
     def model_dump(self, **kwargs) -> Dict[str, Any]:

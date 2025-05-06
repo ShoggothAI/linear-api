@@ -68,7 +68,7 @@ def get_schema_for_type(type_name: str, api_key: str) -> Dict[str, Any]:
 
 def get_model_fields(model_class: type[LinearModel]) -> Set[str]:
     """
-    Get all field names from a Pydantic model.
+    Get all field names from a Pydantic model, excluding those listed in model_config.exclude.
 
     Args:
         model_class: The Pydantic model class to inspect
@@ -80,7 +80,24 @@ def get_model_fields(model_class: type[LinearModel]) -> Set[str]:
         raise ValueError(f"{model_class.__name__} is not a Pydantic model")
 
     # Get all fields from the model
-    return set(model_class.__annotations__.keys())
+    all_fields = set(model_class.__annotations__.keys())
+
+    # Get fields to exclude from model_config
+    excluded_fields = set()
+    if hasattr(model_class, "model_config"):
+        # In Pydantic v2, model_config is a ConfigDict object
+        config = model_class.model_config
+        if isinstance(config, dict) and "exclude" in config:
+            exclude_config = config["exclude"]
+            if isinstance(exclude_config, set):
+                excluded_fields = exclude_config
+            elif isinstance(exclude_config, dict):
+                excluded_fields = set(exclude_config.keys())
+            elif hasattr(exclude_config, "__iter__"):
+                excluded_fields = set(exclude_config)
+
+    # Return fields that are not excluded
+    return all_fields - excluded_fields
 
 
 def compare_fields(
@@ -118,6 +135,14 @@ def compare_fields(
     missing_in_model = graphql_fields - model_fields
     extra_in_model = model_fields - graphql_fields
 
+    # Filter out known missing fields
+    if hasattr(model_class, "known_missing_fields") and model_class.known_missing_fields:
+        missing_in_model = missing_in_model - set(model_class.known_missing_fields)
+
+    # Filter out known extra fields
+    if hasattr(model_class, "known_extra_fields") and model_class.known_extra_fields:
+        extra_in_model = extra_in_model - set(model_class.known_extra_fields)
+
     return common_fields, missing_in_model, extra_in_model
 
 
@@ -136,14 +161,20 @@ def validate_model(model_class: type[LinearModel], api_key: str) -> Dict[str, An
     try:
         common, missing, extra = compare_fields(model_class, api_key=api_key)
 
+        # Get known missing and extra fields
+        known_missing = model_class.known_missing_fields if hasattr(model_class, "known_missing_fields") else []
+        known_extra = model_class.known_extra_fields if hasattr(model_class, "known_extra_fields") else []
+
         return {
             "model_name": model_class.__name__,
             "graphql_type": graphql_type_name,
             "common_fields": sorted(list(common)),
             "missing_in_model": sorted(list(missing)),
             "extra_in_model": sorted(list(extra)),
+            "known_missing_fields": sorted(known_missing),
+            "known_extra_fields": sorted(known_extra),
             "completeness": (
-                len(common) / (len(common) + len(missing)) if common or missing else 1.0
+                len(common) / (len(common) + len(missing) + len(known_missing)) if common or missing or known_missing else 1.0
             ),
         }
     except Exception as e:
@@ -216,9 +247,19 @@ def print_validation_results(results: Dict[str, Dict[str, Any]]) -> None:
             for field in result["missing_in_model"]:
                 print(f"  - {field}")
 
+        if result.get("known_missing_fields"):
+            print("\nKnown missing fields (intentionally excluded):")
+            for field in result["known_missing_fields"]:
+                print(f"  - {field}")
+
         if result.get("extra_in_model"):
             print("\nExtra fields in model (not in GraphQL schema):")
             for field in result["extra_in_model"]:
+                print(f"  - {field}")
+
+        if result.get("known_extra_fields"):
+            print("\nKnown extra fields (intentionally included):")
+            for field in result["known_extra_fields"]:
                 print(f"  - {field}")
 
     print("\n")
@@ -278,6 +319,14 @@ def suggest_model_improvements(
     graphql_type_name = model_class.linear_class_name
     field_details = get_field_details(graphql_type_name, api_key=api_key)
     suggestions = [f"# Suggested improvements for {model_class.__name__}:"]
+
+    # Get known missing fields to exclude from suggestions
+    known_missing = set(model_class.known_missing_fields) if hasattr(model_class, "known_missing_fields") else set()
+
+    # Add a note about known missing fields if there are any
+    if known_missing:
+        suggestions.append(f"# Note: {len(known_missing)} known missing fields are excluded from suggestions")
+        suggestions.append(f"# Known missing fields: {', '.join(sorted(known_missing))}")
 
     for field in sorted(missing):
         if field in field_details:
