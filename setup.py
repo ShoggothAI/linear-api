@@ -24,6 +24,6 @@ setuptools.setup(
     python_requires=">=3.9",
     install_requires=[
         "pydantic>=2.0.0",
-        "requests>=2.0.0",
+        "requests>=2.25.0",
     ],
 )
