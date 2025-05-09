@@ -212,3 +212,41 @@ def test_delete_nonexistent_project(client):
     # Try to delete a project with a non-existent ID
     with pytest.raises(ValueError):
         client.projects.delete("non-existent-project-id")
+
+
+def test_get_project_members(client, test_project):
+    """Test getting members of a project."""
+    # Get project members
+    members = client.projects.get_members(test_project.id)
+
+    # Verify we got a list
+    assert isinstance(members, list)
+
+    # Members might be empty if the project has no members yet
+    if not members:
+        return
+
+    # Verify each member is a LinearUser instance
+    for member in members:
+        assert hasattr(member, 'id')
+        assert hasattr(member, 'name')
+        assert hasattr(member, 'email')
+        assert hasattr(member, 'displayName')
+
+
+def test_get_project_milestones(client, test_project):
+    """Test getting milestones for a project."""
+    # Get milestones
+    milestones = client.projects.get_milestones(test_project.id)
+
+    # Verify we got a list
+    assert isinstance(milestones, list)
+
+    # Milestones might be empty if the project has no milestones
+    if not milestones:
+        return
+
+    # Verify each milestone has the expected structure
+    for milestone in milestones:
+        assert "id" in milestone
+        assert "name" in milestone

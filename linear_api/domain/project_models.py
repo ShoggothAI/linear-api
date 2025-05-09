@@ -135,6 +135,22 @@ class LinearProject(LinearModel):
     Represents a complete project retrieved from Linear.
     """
     linear_class_name: ClassVar[str] = "Project"
+    known_extra_fields: ClassVar[List[str]] = []
+    known_missing_fields: ClassVar[List[str]] = [
+        "members",
+        "projectMilestones",
+        "comments",
+        "issues",
+        "projectUpdates",
+        "relations",
+        "teams",
+        "documents",
+        "externalLinks",
+        "history",
+        "initiatives",
+        "labels",
+        "needs"
+    ]
 
     # Required fields
     id: str
@@ -177,31 +193,18 @@ class LinearProject(LinearModel):
     projectUpdateRemindersPausedUntilAt: Optional[datetime] = None
 
     # Complex fields
-    comments: Optional[CommentConnection] = None
     convertedFromIssue: Optional[Dict[str, Any]] = None
     creator: Optional[LinearUserReference] = None
     currentProgress: Optional[Dict[str, Any]] = None
-    documentContent: Optional[DocumentContent] = None
-    documents: Optional[DocumentConnection] = None
-    externalLinks: Optional[EntityExternalLinkConnection] = None
     favorite: Optional[Favorite] = None
-    history: Optional[ProjectHistoryConnection] = None
-    initiatives: Optional[InitiativeConnection] = None
     integrationsSettings: Optional[IntegrationsSettings] = None
     inverseRelations: Optional[ProjectRelationConnection] = None
-    issues: Optional[IssueConnection] = None
     labelIds: Optional[List[str]] = None
-    labels: Optional[ProjectLabelConnection] = None
     lastAppliedTemplate: Optional[Template] = None
     lastUpdate: Optional[ProjectUpdate] = None
     lead: Optional[LinearUserReference] = None
-    members: Optional[UserConnection] = None
-    needs: Optional[CustomerNeedConnection] = None
     progressHistory: Optional[Dict[str, Any]] = None
-    projectMilestones: Optional[ProjectMilestoneConnection] = None
-    projectUpdates: Optional[ProjectUpdateConnection] = None
     relations: Optional[ProjectRelationConnection] = None
-    teams: Optional[TeamConnection] = None
 
     # Fields with unknown types in the API
     completedIssueCountHistory: Optional[Dict[str, Any]] = None
@@ -219,3 +222,29 @@ class Cycle(BaseModel):
     number: int
     startsAt: datetime
     endsAt: datetime
+
+
+class CustomerNeed(LinearModel):
+    """
+    Represents a customer need in Linear.
+    """
+    linear_class_name: ClassVar[str] = "CustomerNeed"
+
+    id: str
+    title: str
+    description: Optional[str] = None
+    createdAt: datetime
+    updatedAt: datetime
+
+
+class Initiative(LinearModel):
+    """
+    Represents an initiative in Linear.
+    """
+    linear_class_name: ClassVar[str] = "Initiative"
+
+    id: str
+    name: str
+    description: Optional[str] = None
+    createdAt: datetime
+    updatedAt: datetime

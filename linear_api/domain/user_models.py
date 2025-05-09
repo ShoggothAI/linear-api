@@ -20,7 +20,7 @@ class LinearUserReference(LinearModel):
     id: str
     name: str
     displayName: str
-    email: str
+    email: Optional[str] = None
 
     # Optional fields
     createdAt: Optional[datetime] = None
@@ -33,6 +33,14 @@ class LinearUser(LinearModel):
     Represents a complete user in Linear.
     """
     linear_class_name: ClassVar[str] = "User"
+    known_missing_fields: ClassVar[List[str]] = [
+        "assignedIssues",
+        "createdIssues",
+        "drafts",
+        "issueDrafts",
+        "teamMemberships",
+        "teams"
+    ]
 
     # Required fields
     id: str
@@ -67,13 +75,7 @@ class LinearUser(LinearModel):
     url: Optional[str] = None
 
     # Complex fields with their models
-    assignedIssues: Optional[Dict[str, Any]] = None
-    createdIssues: Optional[Dict[str, Any]] = None
-    drafts: Optional[Dict[str, Any]] = None
-    issueDrafts: Optional[Dict[str, Any]] = None
     organization: Optional[Organization] = None
-    teamMemberships: Optional[Dict[str, Any]] = None
-    teams: Optional[Dict[str, Any]] = None
 
 
 class UserConnection(LinearModel):

@@ -338,3 +338,55 @@ def test_get_history(client, test_issue):
 
     # Verify we got a list (might be empty for a new issue)
     assert isinstance(history, list)
+
+
+def test_get_issue_children(client, test_issue):
+    """Test getting child issues for an issue."""
+    # Create a child issue for testing
+    from linear_api.domain import LinearIssueInput, LinearPriority
+
+    child_input = LinearIssueInput(
+        title=f"Child of test_issue {test_issue.id}",
+        teamName=test_issue.team.name,
+        description="This is a child issue created for testing get_children",
+        priority=LinearPriority.MEDIUM,
+        parentId=test_issue.id
+    )
+
+    child_issue = client.issues.create(child_input)
+
+    try:
+        # Get children
+        children = client.issues.get_children(test_issue.id)
+
+        # Verify we got a dictionary
+        assert isinstance(children, dict)
+
+        # Verify the child issue is in the returned dictionary
+        assert child_issue.id in children
+
+        # Verify the child has the correct parent
+        assert children[child_issue.id].parentId == test_issue.id
+
+    finally:
+        # Clean up - delete the child issue
+        client.issues.delete(child_issue.id)
+
+
+def test_get_issue_subscribers(client, test_issue):
+    """Test getting subscribers of an issue."""
+    # Get subscribers
+    subscribers = client.issues.get_subscribers(test_issue.id)
+
+    # Verify we got a list
+    assert isinstance(subscribers, list)
+
+    # Skip the rest if no subscribers (common for test issues)
+    if not subscribers:
+        return
+
+    # Verify each subscriber is a LinearUser instance
+    for subscriber in subscribers:
+        assert hasattr(subscriber, 'id')
+        assert hasattr(subscriber, 'name')
+        assert hasattr(subscriber, 'email')

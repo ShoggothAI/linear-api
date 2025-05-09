@@ -14,7 +14,7 @@ from .common_models import DocumentContent, Comment, Favorite, Template, ActorBo
 from .enums import LinearPriority, SLADayCountType, IntegrationService
 from .project_models import LinearProject, ProjectMilestone, Cycle
 from .team_models import LinearTeam, LinearState
-from .user_models import LinearUser
+from .user_models import LinearUser, LinearUserReference
 
 
 class LinearLabel(LinearModel):
@@ -23,10 +23,22 @@ class LinearLabel(LinearModel):
     """
 
     linear_class_name: ClassVar[str] = "IssueLabel"
+    known_extra_fields: ClassVar[List[str]] = ["issue_ids"]
+    known_missing_fields: ClassVar[List[str]] = ["children", "issues", "team"]
 
     id: str
     name: str
     color: str
+
+    archivedAt: Optional[datetime] = None
+    createdAt: Optional[datetime] = None
+    updatedAt: Optional[datetime] = None
+    description: Optional[str] = None
+    isGroup: Optional[bool] = None
+    inheritedFrom: Optional[Dict[str, Any]] = None
+    parent: Optional["LinearLabel"] = None
+    creator: Optional[LinearUserReference] = None
+    issue_ids: Optional[List[str]] = None
 
 
 class LinearAttachment(LinearModel):
@@ -36,6 +48,7 @@ class LinearAttachment(LinearModel):
 
     linear_class_name: ClassVar[str] = "Attachment"
     known_extra_fields: ClassVar[List[str]] = ["issueId"]
+    known_missing_fields: ClassVar[List[str]] = ["issue"]
 
     id: str  # Unique identifier for the attachment
     url: str  # URL or resource identifier for the attachment
@@ -45,6 +58,16 @@ class LinearAttachment(LinearModel):
     issueId: str  # ID of the issue this attachment is associated with
     createdAt: datetime  # Timestamp when the attachment was created
     updatedAt: datetime  # Timestamp when the attachment was last updated
+
+    archivedAt: Optional[datetime] = None
+    bodyData: Optional[Dict[str, Any]] = None
+    groupBySource: Optional[bool] = None
+    source: Optional[str] = None
+    sourceType: Optional[str] = None
+
+
+    creator: Optional[LinearUser] = None
+    externalUserCreator: Optional[ExternalUser] = None
 
 
 class LinearAttachmentInput(LinearModel):
@@ -68,7 +91,17 @@ class LinearIssue(LinearModel):
 
     linear_class_name: ClassVar[str] = "Issue"
     known_extra_fields: ClassVar[List[str]] = ["parentId"]
-    known_missing_fields: ClassVar[List[str]] = ["parent"]
+    known_missing_fields: ClassVar[List[str]] = [
+        "parent",
+        "children",
+        "comments",
+        "history",
+        "inverseRelations",
+        "needs",
+        "reactions",
+        "relations",
+        "subscribers"
+    ]
 
     # Required fields
     id: str

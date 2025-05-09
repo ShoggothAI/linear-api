@@ -24,6 +24,8 @@ from .common_models import (
     IssueDraft,
     ActorBot,
     ExternalUser,
+    Document,
+    EntityExternalLink,
 )
 # Import all enums
 from .enums import (
@@ -60,6 +62,8 @@ from .project_models import (
     CustomerNeedConnection,
     LinearProject,
     Cycle,
+    CustomerNeed,
+    Initiative,
 )
 # Import team models
 from .team_models import (
@@ -88,7 +92,8 @@ __all__ = [
     'Organization', 'Comment', 'CommentConnection', 'DocumentContent',
     'DocumentConnection', 'EntityExternalLinkConnection', 'Favorite',
     'Template', 'TimelessDate', 'IntegrationsSettings', 'TeamMembership',
-    'Draft', 'IssueDraft', 'ActorBot', 'ExternalUser',
+    'Draft', 'IssueDraft', 'ActorBot', 'ExternalUser', 'Document',
+    'EntityExternalLink',
 
     # User models
     'LinearUserReference', 'LinearUser', 'UserConnection',
@@ -101,6 +106,7 @@ __all__ = [
     'ProjectUpdate', 'ProjectUpdateConnection', 'ProjectHistoryConnection',
     'InitiativeConnection', 'ProjectRelationConnection', 'IssueConnection',
     'ProjectLabelConnection', 'CustomerNeedConnection', 'LinearProject', 'Cycle',
+    'CustomerNeed', 'Initiative',
 
     # Issue models
     'LinearLabel', 'LinearAttachment', 'LinearAttachmentInput',

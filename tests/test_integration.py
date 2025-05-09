@@ -292,3 +292,102 @@ def test_comprehensive_issue_workflow(client, test_team_name):
             client.projects.delete(project.id)
         except ValueError:
             pass
+
+
+def test_comprehensive_model_updates(client, test_team_name):
+    """Test that all model updates work together in a comprehensive workflow."""
+    import uuid
+    import time
+    from linear_api.domain import LinearIssueInput, LinearIssueUpdateInput, LinearPriority
+
+    # Get team ID
+    team_id = client.teams.get_id_by_name(test_team_name)
+
+    # Get the team with full details
+    team = client.teams.get(team_id)
+
+    # Get all states with issue IDs
+    states = client.teams.get_states(team_id, include_issue_ids=True)
+
+    # Get all labels with issue IDs
+    labels = client.teams.get_labels(team_id, include_issue_ids=True)
+
+    # Create a test issue to work with
+    issue_input = LinearIssueInput(
+        title=f"Test Comprehensive Model Updates {uuid.uuid4().hex[:8]}",
+        teamName=test_team_name,
+        description="This is a test issue for comprehensive model testing",
+        priority=LinearPriority.MEDIUM,
+    )
+
+    issue = client.issues.create(issue_input)
+
+    try:
+        # Verify team has all extended fields
+        assert hasattr(team, 'displayName')
+        assert hasattr(team, 'cyclesEnabled')
+        assert hasattr(team, 'issueEstimationType')
+
+        # Verify states have issue_ids field
+        for state in states:
+            assert hasattr(state, 'issue_ids')
+            assert isinstance(state.issue_ids, list) or state.issue_ids is None
+
+        # Verify labels have issue_ids field
+        for label in labels:
+            assert hasattr(label, 'issue_ids')
+            assert isinstance(label.issue_ids, list) or label.issue_ids is None
+
+        # Debug logging
+        print("Available states:")
+        for idx, state in enumerate(states):
+            print(f"  {idx}: ID={state.id}, Name={state.name}, Type={state.type}")
+
+        # Test linkage between models
+        if states:
+            target_state = None
+            for state in states:
+                if state.type.lower() != "canceled":
+                    target_state = state
+                    break
+
+            if not target_state:
+                target_state = states[0]
+
+            print(f"Selected target state: ID={target_state.id}, Name={target_state.name}, Type={target_state.type}")
+
+            # Update issue state to target state
+            update_data = LinearIssueUpdateInput(
+                stateName=target_state.name
+            )
+
+            client.issues._cache_clear()
+            client.teams._cache_clear()
+
+            updated_issue = client.issues.update(issue.id, update_data)
+
+            print(f"Updated issue state: ID={updated_issue.state.id}, Name={updated_issue.state.name}")
+
+            client.teams._cache_clear()
+
+            time.sleep(2)
+
+            # Refresh states with issue_ids after update
+            refreshed_states = client.teams.get_states(team_id, include_issue_ids=True)
+
+            # Find the state we updated to BY ID (не по индексу)
+            state = next((s for s in refreshed_states if s.id == updated_issue.state.id), None)
+
+            print(f"Found refreshed state: ID={state.id if state else 'None'}, Name={state.name if state else 'None'}")
+
+            if state and state.issue_ids:
+                print(f"Issue IDs in state: {state.issue_ids}")
+
+                assert issue.id in state.issue_ids, f"Issue ID {issue.id} not found in state's issue_ids: {state.issue_ids}"
+            else:
+                print(f"State has no issue_ids: {state}")
+                assert state is not None, f"Could not find state with ID {updated_issue.state.id}"
+
+    finally:
+        # Clean up - delete the test issue
+        client.issues.delete(issue.id)

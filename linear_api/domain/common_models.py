@@ -131,3 +131,28 @@ class ExternalUser(LinearModel):
     id: str
     name: str
     email: str
+
+
+class Document(LinearModel):
+    """
+    Represents a document in Linear.
+    """
+    linear_class_name: ClassVar[str] = "Document"
+
+    id: str
+    title: Optional[str] = None
+    icon: Optional[str] = None
+    createdAt: datetime
+    updatedAt: datetime
+
+
+class EntityExternalLink(LinearModel):
+    """
+    Represents an external link for an entity in Linear.
+    """
+    linear_class_name: ClassVar[str] = "EntityExternalLink"
+
+    id: str
+    url: str
+    label: Optional[str] = None
+    createdAt: datetime
