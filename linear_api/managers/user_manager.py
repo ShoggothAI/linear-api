@@ -350,7 +350,7 @@ class UserManager(BaseManager[LinearUser]):
             return cached_issues
 
         query = """
-       query($userId: String!, $cursor: String) {
+        query($userId: ID!, $cursor: String) {
          issues(filter: { assignee: { id: { eq: $userId } } }, first: 50, after: $cursor) {
            nodes {
              id
@@ -360,8 +360,8 @@ class UserManager(BaseManager[LinearUser]):
              endCursor
            }
          }
-       }
-       """
+        }
+        """
 
         # Use pagination to get all assigned issue IDs
         issue_nodes = self._handle_pagination(

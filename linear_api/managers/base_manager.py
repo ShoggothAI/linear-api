@@ -83,8 +83,6 @@ class BaseManager(Generic[T]):
         """
         Handle pagination for GraphQL queries that return collections.
 
-        This enhanced version returns a list of model instances directly.
-
         Args:
             query: The GraphQL query string with cursor parameter
             variables: Variables for the query (without cursor)
@@ -96,28 +94,60 @@ class BaseManager(Generic[T]):
         Returns:
             List of resources, optionally converted to model_class instances
         """
-        results: List[Any] = []
+        results = []
         cursor = initial_cursor
+        max_retries = 3  # Constant value for retries
 
         while True:
-            # Add cursor to variables if we have one
-            query_vars = {**variables}
-            if cursor:
-                query_vars["cursor"] = cursor
+            retry_count = 0
+            success = False
 
-            # Execute the query
-            response = self._execute_raw_query(query, query_vars)
+            while not success and retry_count <= max_retries:
+                try:
+                    # Add cursor to variables if we have one
+                    query_vars = {**variables}
+                    if cursor:
+                        query_vars["cursor"] = cursor
 
-            # Navigate to the nodes using the node_path
+                    # Execute the query
+                    response = self._execute_raw_query(query, query_vars)
+                    success = True  # Query succeeded
+
+                except Exception as e:
+                    retry_count += 1
+                    if retry_count > max_retries:
+                        # Log error and exit pagination loop
+                        import logging
+                        logging.error(f"Failed to execute query after {max_retries} attempts: {e}")
+                        return results  # Return what we've collected so far
+
+                    # Exponential backoff before retrying
+                    import time
+                    wait_time = 2 ** retry_count
+                    time.sleep(wait_time)
+
+            if not success:
+                break  # If it failed after all attempts - exit
+
+            # Navigate through result to extract nodes
             nodes_container = response
-            for path_segment in node_path[:-1]:
-                if path_segment not in nodes_container:
-                    break
-                nodes_container = nodes_container[path_segment]
+            page_info = None
 
-            # Extract the nodes
-            if node_path[-1] in nodes_container:
-                nodes = nodes_container[node_path[-1]]
+            try:
+                # Navigate to the nodes container
+                for path_segment in node_path[:-1]:
+                    if path_segment not in nodes_container:
+                        break
+                    nodes_container = nodes_container[path_segment]
+
+                # Save reference to pageInfo for checking next page
+                if "pageInfo" in nodes_container:
+                    page_info = nodes_container["pageInfo"]
+
+                # Extract nodes
+                nodes = []
+                if node_path[-1] in nodes_container:
+                    nodes = nodes_container[node_path[-1]]
 
                 # Process each node
                 for node in nodes:
@@ -125,24 +155,30 @@ class BaseManager(Generic[T]):
                         node = transform_func(node)
 
                     if model_class:
-                        # Convert to model instance
                         try:
+                            # Convert to model instance
                             node = model_class(**node)
                         except Exception as e:
-                            print(f"Error converting node to {model_class.__name__}: {e}")
+                            import logging
+                            logging.warning(f"Error converting node to {model_class.__name__}: {e}")
                             # Continue with raw node if conversion fails
-                            pass
 
                     results.append(node)
 
+            except Exception as e:
+                import logging
+                logging.warning(f"Error processing query results: {e}")
+                # Continue with what we were able to process
+
             # Check if there are more pages
-            if (
-                    "pageInfo" in nodes_container
-                    and nodes_container["pageInfo"].get("hasNextPage", False)
-            ):
-                cursor = nodes_container["pageInfo"]["endCursor"]
+            has_next_page = False
+            if page_info and "hasNextPage" in page_info:
+                has_next_page = page_info.get("hasNextPage", False)
+
+            if has_next_page and "endCursor" in page_info and page_info["endCursor"]:
+                cursor = page_info["endCursor"]
             else:
-                break
+                break  # No more pages or no valid cursor
 
         # If model_class is specified, ensure all items are of that type
         if model_class is not None:
@@ -152,10 +188,8 @@ class BaseManager(Generic[T]):
                     try:
                         results[i] = model_class(**item)
                     except Exception as e:
-                        print(f"Error converting item to {model_class.__name__}: {e}")
-
-            # Type hint for mypy
-            return cast(List[V], results)
+                        import logging
+                        logging.warning(f"Error converting item to {model_class.__name__}: {e}")
 
         return results
 
