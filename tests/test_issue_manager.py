@@ -16,7 +16,6 @@ from linear_api.domain import (
     LinearIssueUpdateInput,
     LinearPriority,
     LinearState,
-    LinearUser,
     SLADayCountType,
 )
 
@@ -390,3 +389,39 @@ def test_get_issue_subscribers(client, test_issue):
         assert hasattr(subscriber, 'id')
         assert hasattr(subscriber, 'name')
         assert hasattr(subscriber, 'email')
+
+
+def test_get_reactions(client, test_issue):
+    """Test getting reactions to an issue."""
+    # Get reactions
+    reactions = client.issues.get_reactions(test_issue.id)
+
+    # Verify the result is a list (might be empty for a new issue)
+    assert isinstance(reactions, list)
+
+
+def test_get_relations(client, test_issue):
+    """Test getting relations for an issue."""
+    # Get relations
+    relations = client.issues.get_relations(test_issue.id)
+
+    # Verify the result is a list (might be empty for a new issue)
+    assert isinstance(relations, list)
+
+
+def test_get_inverse_relations(client, test_issue):
+    """Test getting inverse relations for an issue."""
+    # Get inverse relations
+    relations = client.issues.get_inverse_relations(test_issue.id)
+
+    # Verify the result is a list (might be empty for a new issue)
+    assert isinstance(relations, list)
+
+
+def test_get_needs(client, test_issue):
+    """Test getting customer needs associated with an issue."""
+    # Get needs
+    needs = client.issues.get_needs(test_issue.id)
+
+    # Verify the result is a list (might be empty for a new issue)
+    assert isinstance(needs, list)

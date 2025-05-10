@@ -84,3 +84,13 @@ class UserConnection(LinearModel):
 
     nodes: List[LinearUserReference] = Field(default_factory=list)
     pageInfo: Optional[Dict[str, Any]] = None
+
+
+class Reaction(LinearModel):
+    """Represents a reaction in Linear"""
+    linear_class_name: ClassVar[str] = "Reaction"
+
+    id: str
+    emoji: str
+    user: Optional[LinearUserReference] = None
+    createdAt: datetime

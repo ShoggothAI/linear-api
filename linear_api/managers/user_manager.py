@@ -488,7 +488,7 @@ class UserManager(BaseManager[LinearUser]):
             return cached_issues
 
         query = """
-       query($userId: String!, $cursor: String) {
+        query($userId: String!, $cursor: String) {
          user(id: $userId) {
            createdIssues(first: 50, after: $cursor) {
              nodes {
@@ -511,8 +511,8 @@ class UserManager(BaseManager[LinearUser]):
              }
            }
          }
-       }
-       """
+        }
+        """
 
         # Get the initial response
         response = self._execute_query(query, {"userId": user_id, "cursor": None})
@@ -548,15 +548,11 @@ class UserManager(BaseManager[LinearUser]):
             return cached_drafts
 
         query = """
-       query($userId: String!, $cursor: String) {
+        query($userId: String!, $cursor: String) {
          user(id: $userId) {
            drafts(first: 50, after: $cursor) {
              nodes {
                id
-               title
-               content
-               createdAt
-               updatedAt
              }
              pageInfo {
                hasNextPage
@@ -564,8 +560,8 @@ class UserManager(BaseManager[LinearUser]):
              }
            }
          }
-       }
-       """
+        }
+        """
 
         # Use the extract_and_cache method to simplify implementation
         response = self._execute_query(query, {"userId": user_id, "cursor": None})
@@ -607,15 +603,6 @@ class UserManager(BaseManager[LinearUser]):
            issueDrafts(first: 50, after: $cursor) {
              nodes {
                id
-               title
-               description
-               team {
-                 id
-                 name
-                 key
-               }
-               createdAt
-               updatedAt
              }
              pageInfo {
                hasNextPage

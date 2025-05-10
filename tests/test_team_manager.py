@@ -6,7 +6,7 @@ This module tests the functionality of the TeamManager class.
 
 import pytest
 
-from linear_api import LinearClient
+from linear_api import LinearClient, LinearUser
 from linear_api.domain import LinearTeam, LinearState
 
 
@@ -422,3 +422,153 @@ def test_get_templates(client, test_team_name):
         assert "id" in template
         assert "name" in template
         assert "type" in template  # Template type (issue, project, etc.)
+
+
+def test_get_label_children(client, test_team_name):
+    """Test getting child labels for a team."""
+    # Get the team ID
+    team_id = client.teams.get_id_by_name(test_team_name)
+
+    # Get all labels for the team
+    labels = client.teams.get_labels(team_id)
+
+    # Skip test if no labels
+    if not labels:
+        pytest.skip("No labels available for testing")
+
+    # Find a label that might be a parent (has isGroup=True)
+    parent_label = next((label for label in labels if getattr(label, 'isGroup', False)), None)
+
+    # If no parent label found, skip test
+    if not parent_label:
+        pytest.skip("No parent labels available for testing")
+
+    # Get child labels
+    children = client.teams.get_label_children(parent_label.id)
+
+    # Verify result structure
+    assert isinstance(children, list)
+
+    # Check each child
+    for child in children:
+        assert hasattr(child, 'id')
+        assert hasattr(child, 'name')
+        assert hasattr(child, 'color')
+
+
+def test_get_parent(client):
+    """Test getting a parent team."""
+    # Get all teams
+    teams = client.teams.get_all()
+
+    # Find a team that might have a parent
+    child_team = None
+    for team_id, team in teams.items():
+        if hasattr(team, 'parentId') and team.parentId:
+            child_team = team
+            break
+
+    # Skip test if no team with parent found
+    if not child_team:
+        pytest.skip("No team with parent found for testing")
+
+    # Get the parent team
+    parent_team = client.teams.get_parent(child_team.id)
+
+    # Verify the result is a team
+    assert isinstance(parent_team, LinearTeam)
+    assert parent_team.id == child_team.parentId
+
+
+def test_get_triage_responsibility(client, test_team_name):
+    """Test getting triage responsibility data for a team."""
+    # Get the team ID
+    team_id = client.teams.get_id_by_name(test_team_name)
+
+    # Get triage responsibility
+    triage_data = client.teams.get_triage_responsibility(team_id)
+
+    # Triage may not be set up for all teams, so just verify the structure
+    assert isinstance(triage_data, dict)
+
+    # If triage is set up, check expected fields
+    if triage_data:
+        if 'id' in triage_data:
+            assert isinstance(triage_data['id'], str)
+        if 'scope' in triage_data:
+            assert isinstance(triage_data['scope'], (str, int, float))
+        if 'user' in triage_data and triage_data['user']:
+            assert isinstance(triage_data['user'], LinearUser)
+
+
+def test_get_children(client):
+    """Test getting child teams for a team."""
+    # Get all teams
+    teams = client.teams.get_all()
+
+    # Find a parent team (one that other teams refer to as parent)
+    parent_team = None
+    for team_id, team in teams.items():
+        # Check if any team has this team as parent
+        for other_id, other_team in teams.items():
+            if hasattr(other_team, 'parentId') and other_team.parentId == team_id:
+                parent_team = team
+                break
+        if parent_team:
+            break
+
+    # Skip test if no parent team found
+    if not parent_team:
+        pytest.skip("No parent team found for testing")
+
+    # Get children teams
+    children = client.teams.get_children(parent_team.id)
+
+    # Verify the result is a list of teams
+    assert isinstance(children, list)
+    assert len(children) > 0
+
+    # Check each child
+    for child in children:
+        assert isinstance(child, LinearTeam)
+        assert hasattr(child, 'parentId')
+        assert child.parentId == parent_team.id
+
+
+def test_get_issues(client, test_team_name):
+    """Test getting issues for a team using the team manager."""
+    # Get the team ID
+    team_id = client.teams.get_id_by_name(test_team_name)
+
+    # Get issues for the team
+    issues = client.teams.get_issues(team_id)
+
+    # Verify the result is a list
+    assert isinstance(issues, list)
+
+    # Check each issue has expected structure
+    for issue in issues:
+        assert 'id' in issue
+        assert 'title' in issue
+        assert 'description' in issue or issue.get('description') is None
+        assert 'state' in issue
+        assert 'type' in issue['state']
+
+
+def test_get_webhooks(client, test_team_name):
+    """Test getting webhooks for a team."""
+    # Get the team ID
+    team_id = client.teams.get_id_by_name(test_team_name)
+
+    # Get webhooks
+    webhooks = client.teams.get_webhooks(team_id)
+
+    # Verify the result is a list (might be empty if no webhooks are set up)
+    assert isinstance(webhooks, list)
+
+    # If webhooks exist, check their structure
+    for webhook in webhooks:
+        assert 'id' in webhook
+        assert 'label' in webhook
+        assert 'url' in webhook
+        assert 'enabled' in webhook

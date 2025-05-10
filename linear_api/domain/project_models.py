@@ -19,7 +19,7 @@ from .enums import (
     ProjectStatusType, ProjectUpdateHealthType
 )
 from .team_models import TeamConnection
-from .user_models import LinearUserReference, UserConnection
+from .user_models import LinearUserReference, UserConnection, LinearUser
 
 
 class ProjectStatus(LinearModel):
@@ -231,10 +231,20 @@ class CustomerNeed(LinearModel):
     linear_class_name: ClassVar[str] = "CustomerNeed"
 
     id: str
-    title: str
-    description: Optional[str] = None
     createdAt: datetime
     updatedAt: datetime
+    archivedAt: Optional[datetime] = None
+    customer: Optional[Dict[str, Any]] = None
+    issue: Optional[Dict[str, Any]] = None
+    project: Optional[Dict[str, Any]] = None
+    comment: Optional[Dict[str, Any]] = None
+    attachment: Optional[Dict[str, Any]] = None
+    projectAttachment: Optional[Dict[str, Any]] = None
+    priority: Optional[float] = None
+    body: Optional[str] = None
+    bodyData: Optional[str] = None
+    creator: Optional[LinearUser] = None
+    url: Optional[str] = None
 
 
 class Initiative(LinearModel):
@@ -248,3 +258,33 @@ class Initiative(LinearModel):
     description: Optional[str] = None
     createdAt: datetime
     updatedAt: datetime
+
+
+class ProjectRelation(LinearModel):
+    """Represents a relation between projects."""
+    linear_class_name: ClassVar[str] = "ProjectRelation"
+
+    id: str
+    createdAt: datetime
+    updatedAt: Optional[datetime] = None
+    archivedAt: Optional[datetime] = None
+    type: str
+    project: Optional[Dict[str, Any]] = None
+    projectMilestone: Optional[Dict[str, Any]] = None
+    anchorType: Optional[str] = None
+    relatedProject: Optional[Dict[str, Any]] = None
+    relatedProjectMilestone: Optional[Dict[str, Any]] = None
+    relatedAnchorType: Optional[str] = None
+    user: Optional[LinearUser] = None
+
+
+class ProjectHistory(LinearModel):
+    """Represents a history entry for a project."""
+    linear_class_name: ClassVar[str] = "ProjectHistory"
+
+    id: str
+    createdAt: datetime
+    updatedAt: Optional[datetime] = None
+    archivedAt: Optional[datetime] = None
+    entries: Optional[Dict[str, Any]] = None
+    project: Optional[Dict[str, Any]] = None

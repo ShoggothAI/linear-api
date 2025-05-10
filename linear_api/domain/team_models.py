@@ -11,6 +11,7 @@ from pydantic import Field
 
 from . import Template, IntegrationsSettings, Organization
 from .base_domain import LinearModel
+from .user_models import LinearUser
 
 
 class LinearState(LinearModel):
@@ -131,3 +132,17 @@ class TeamConnection(LinearModel):
 
     nodes: List[LinearTeam] = Field(default_factory=list)
     pageInfo: Optional[Dict[str, Any]] = None
+
+
+class TriageResponsibility(LinearModel):
+    """Represents triage responsibility for a team."""
+    linear_class_name: ClassVar[str] = "TriageResponsibility"
+
+    id: str
+    createdAt: Optional[datetime] = None
+    updatedAt: Optional[datetime] = None
+    archivedAt: Optional[datetime] = None
+    action: Optional[str] = None
+    team: Optional[LinearTeam] = None
+    timeSchedule: Optional[Dict[str, Any]] = None
+    currentUser: Optional[LinearUser] = None

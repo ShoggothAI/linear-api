@@ -266,3 +266,28 @@ class LinearIssueUpdateInput(LinearModel):
 
     # metadata will be auto-converted into an attachment
     metadata: Optional[Dict[str, Any]] = None
+
+
+class IssueRelation(LinearModel):
+    """Represents an issue relation in Linear"""
+    linear_class_name: ClassVar[str] = "IssueRelation"
+
+    id: str
+    type: str
+    relatedIssue: Optional[Dict[str, Any]] = None
+    createdAt: datetime
+
+
+class CustomerNeedResponse(LinearModel):
+    """Customer need model matching the actual API response"""
+    linear_class_name: ClassVar[str] = "CustomerNeed"
+
+    id: str
+    createdAt: datetime
+    updatedAt: datetime
+    archivedAt: Optional[datetime] = None
+    priority: Optional[float] = None
+    body: Optional[str] = None
+    bodyData: Optional[str] = None
+    url: Optional[str] = None
+    creator: Optional[LinearUser] = None

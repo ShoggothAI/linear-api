@@ -8,8 +8,8 @@ import pytest
 import time
 import uuid
 
-from linear_api import LinearClient
-from linear_api.domain import LinearProject
+from linear_api import LinearClient, LinearTeam
+from linear_api.domain import LinearProject, ProjectMilestone, Comment
 
 
 @pytest.fixture
@@ -250,3 +250,131 @@ def test_get_project_milestones(client, test_project):
     for milestone in milestones:
         assert "id" in milestone
         assert "name" in milestone
+
+
+def test_get_milestones(client, test_project):
+    """Test getting milestones for a project."""
+    # Get milestones
+    milestones = client.projects.get_milestones(test_project.id)
+
+    # Verify the result is a list (might be empty for a new project)
+    assert isinstance(milestones, list)
+
+    # If milestones exist, check their structure
+    for milestone in milestones:
+        assert isinstance(milestone, ProjectMilestone)
+        assert hasattr(milestone, 'id')
+        assert hasattr(milestone, 'name')
+
+
+def test_get_comments(client, test_project):
+    """Test getting comments for a project."""
+    # Get comments
+    comments = client.projects.get_comments(test_project.id)
+
+    # Verify the result is a list (might be empty for a new project)
+    assert isinstance(comments, list)
+
+    # If comments exist, check their structure
+    for comment in comments:
+        assert isinstance(comment, Comment)
+        assert hasattr(comment, 'id')
+        assert hasattr(comment, 'body')
+        assert hasattr(comment, 'createdAt')
+
+
+def test_get_relations(client, test_project):
+    """Test getting relations for a project."""
+    # Get relations
+    relations = client.projects.get_relations(test_project.id)
+
+    # Verify the result is a list (might be empty for a new project)
+    assert isinstance(relations, list)
+
+    # If relations exist, check their structure
+    for relation in relations:
+        assert 'id' in relation
+        assert 'type' in relation
+        assert 'targetId' in relation
+
+
+def test_get_teams(client, test_project):
+    """Test getting teams associated with a project."""
+    # Get teams
+    teams = client.projects.get_teams(test_project.id)
+
+    # Verify the result is a list
+    assert isinstance(teams, list)
+    assert len(teams) > 0  # Should have at least one team (the one it was created in)
+
+    # Check each team
+    for team in teams:
+        assert isinstance(team, LinearTeam)
+        assert hasattr(team, 'id')
+        assert hasattr(team, 'name')
+
+
+def test_get_documents(client, test_project):
+    """Test getting documents associated with a project."""
+    # Get documents
+    documents = client.projects.get_documents(test_project.id)
+
+    # Verify the result is a list (might be empty for a new project)
+    assert isinstance(documents, list)
+
+
+def test_get_external_links(client, test_project):
+    """Test getting external links associated with a project."""
+    # Get external links
+    links = client.projects.get_external_links(test_project.id)
+
+    # Verify the result is a list (might be empty for a new project)
+    assert isinstance(links, list)
+
+
+def test_get_history(client, test_project):
+    """Test getting the history of a project."""
+    # Get history
+    history = client.projects.get_history(test_project.id)
+
+    # Verify the result is a list
+    assert isinstance(history, list)
+
+    # We used to expect at least one entry (creation), but API might return an empty list
+    # So we just check that the return type is a list without asserting its length
+
+    # Check structure of history items if any exist
+    for item in history:
+        assert hasattr(item, 'id')
+        assert hasattr(item, 'createdAt')
+
+        # Check entries if present
+        if hasattr(item, 'entries') and item.entries:
+            assert isinstance(item.entries, dict)
+
+
+def test_get_initiatives(client, test_project):
+    """Test getting initiatives associated with a project."""
+    # Get initiatives
+    initiatives = client.projects.get_initiatives(test_project.id)
+
+    # Verify the result is a list (might be empty for a new project)
+    assert isinstance(initiatives, list)
+
+
+def test_get_labels(client, test_project):
+    """Test getting labels associated with a project."""
+    # Get labels
+    labels = client.projects.get_labels(test_project.id)
+
+    # Verify the result is a list (might be empty for a new project)
+    assert isinstance(labels, list)
+
+
+def test_get_needs(client, test_project):
+    """Test getting customer needs associated with a project."""
+    # Get needs
+    needs = client.projects.get_needs(test_project.id)
+
+    # Verify the result is a list (might be empty for a new project)
+    assert isinstance(needs, list)

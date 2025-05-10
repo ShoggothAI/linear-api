@@ -4,6 +4,7 @@ Integration tests for the Linear API client.
 This module tests the integration between different components
 of the Linear API client.
 """
+import time
 
 import pytest
 import uuid
@@ -14,7 +15,6 @@ from linear_api.domain import (
     LinearIssueInput,
     LinearIssueUpdateInput,
     LinearPriority,
-    SLADayCountType,
 )
 
 
@@ -35,6 +35,29 @@ def client():
 def test_team_name():
     """Fixture to get the name of the test team."""
     return "Test"  # Using the test team
+
+@pytest.fixture
+def test_project(client, test_team_name):
+    """Create a test project and clean up after the test."""
+    # Create a unique project name using timestamp to avoid conflicts
+    project_name = f"Test Project {int(time.time())}"
+
+    # Create the project
+    project = client.projects.create(
+        name=project_name,
+        team_name=test_team_name,
+        description="This is a test project created by automated tests"
+    )
+
+    # Return the project for use in tests
+    yield project
+
+    # Clean up after the test by deleting the project
+    try:
+        client.projects.delete(project.id)
+    except ValueError:
+        # Project might have already been deleted in the test
+        pass
 
 
 def test_create_project_with_issues(client, test_team_name):
@@ -391,3 +414,98 @@ def test_comprehensive_model_updates(client, test_team_name):
     finally:
         # Clean up - delete the test issue
         client.issues.delete(issue.id)
+
+
+def test_create_issue_with_project_and_labels(client, test_team_name, test_project):
+    """Test creating an issue with project and labels."""
+    # Get the team ID
+    team_id = client.teams.get_id_by_name(test_team_name)
+
+    # Get labels for the team
+    labels = client.teams.get_labels(team_id)
+
+    # Skip test if no labels
+    if not labels:
+        pytest.skip("No labels available for testing")
+
+    # Take the first label
+    first_label = labels[0]
+
+    # Create an issue with project and label
+    issue_input = LinearIssueInput(
+        title=f"Issue with Project and Label {int(time.time())}",
+        teamName=test_team_name,
+        description="This is a test issue with project and label",
+        priority=LinearPriority.MEDIUM,
+        projectName=test_project.name,
+        labelIds=[first_label.id]
+    )
+
+    issue = client.issues.create(issue_input)
+
+    try:
+        # Verify the issue has the project and label
+        assert issue.project is not None
+        assert issue.project.id == test_project.id
+        assert issue.labels is not None
+        assert len(issue.labels) > 0
+        assert issue.labels[0].id == first_label.id
+
+    finally:
+        # Clean up - delete the issue
+        client.issues.delete(issue.id)
+
+
+def test_get_project_issues_via_team(client, test_team_name, test_project):
+    """Test getting issues for a specific project via the team manager."""
+    # Get the team ID
+    team_id = client.teams.get_id_by_name(test_team_name)
+
+    # Get issues for the team
+    team_issues = client.teams.get_issues(team_id)
+
+    # Get issues for the project
+    project_issues = client.issues.get_by_project(test_project.id)
+
+    # Verify that project issues are a subset of team issues
+    project_issue_ids = set(issue.id for issue in project_issues.values())
+
+    # Find team issues that are also in the project
+    matching_issues = [issue for issue in team_issues
+                       if 'project' in issue
+                       and issue['project']
+                       and issue['project']['id'] == test_project.id]
+
+    # Verify that we can find project issues within team issues
+    # Note: The data structures might be different, so we're just checking IDs
+    for issue in matching_issues:
+        assert issue['id'] in project_issue_ids
+
+
+def test_user_organization_relationship(client):
+    """Test the relationship between users and their organization."""
+    # Get the current user
+    me = client.users.get_me()
+
+    # Get organization from user
+    org = me.organization
+
+    # The organization might be None depending on API access
+    if not org:
+        pytest.skip("User has no organization information available")
+
+    # Verify organization structure
+    assert hasattr(org, 'id')
+    assert hasattr(org, 'name')
+
+    # Get a team to check the relationship
+    teams = client.teams.get_all()
+    if not teams:
+        pytest.skip("No teams available for testing")
+
+    team = next(iter(teams.values()))
+
+    # Check if team has the same organization
+    assert hasattr(team, 'organization')
+    if team.organization:
+        assert team.organization.id == org.id

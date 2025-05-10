@@ -46,6 +46,8 @@ from .issue_models import (
     LinearIssue,
     LinearIssueInput,
     LinearIssueUpdateInput,
+    IssueRelation,
+    CustomerNeedResponse,
 )
 # Import project models
 from .project_models import (
@@ -64,18 +66,22 @@ from .project_models import (
     Cycle,
     CustomerNeed,
     Initiative,
+    ProjectRelation,
+    ProjectHistory,
 )
 # Import team models
 from .team_models import (
     LinearState,
     LinearTeam,
     TeamConnection,
+    TriageResponsibility,
 )
 # Import user models
 from .user_models import (
     LinearUserReference,
     LinearUser,
     UserConnection,
+    Reaction,
 )
 
 # List of all public exports
@@ -96,19 +102,20 @@ __all__ = [
     'EntityExternalLink',
 
     # User models
-    'LinearUserReference', 'LinearUser', 'UserConnection',
+    'LinearUserReference', 'LinearUser', 'UserConnection', 'Reaction',
 
     # Team models
-    'LinearState', 'LinearTeam', 'TeamConnection',
+    'LinearState', 'LinearTeam', 'TeamConnection', 'TriageResponsibility',
 
     # Project models
     'ProjectStatus', 'ProjectMilestone', 'ProjectMilestoneConnection',
     'ProjectUpdate', 'ProjectUpdateConnection', 'ProjectHistoryConnection',
     'InitiativeConnection', 'ProjectRelationConnection', 'IssueConnection',
     'ProjectLabelConnection', 'CustomerNeedConnection', 'LinearProject', 'Cycle',
-    'CustomerNeed', 'Initiative',
+    'CustomerNeed', 'Initiative', 'ProjectRelation', 'ProjectHistory',
 
     # Issue models
     'LinearLabel', 'LinearAttachment', 'LinearAttachmentInput',
     'LinearIssue', 'LinearIssueInput', 'LinearIssueUpdateInput',
+    'IssueRelation', 'CustomerNeedResponse',
 ]

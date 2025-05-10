@@ -6,7 +6,7 @@ This module provides the IssueManager class for working with Linear issues.
 
 import json
 from datetime import datetime
-from typing import Dict, List, Any
+from typing import Dict, List, Any, ClassVar, Optional
 from urllib.parse import urlparse
 
 from .base_manager import BaseManager
@@ -17,8 +17,9 @@ from ..domain import (
     LinearAttachmentInput,
     LinearPriority,
     Comment,
-    LinearUser
+    LinearUser, LinearModel, Reaction
 )
+from ..domain.issue_models import IssueRelation, CustomerNeedResponse
 from ..utils import process_issue_data
 
 
@@ -636,7 +637,7 @@ class IssueManager(BaseManager[LinearIssue]):
             return cached_history
 
         query = """
-       query($issueId: String!, $cursor: String) {
+        query($issueId: String!, $cursor: String) {
          issue(id: $issueId) {
            history(first: 50, after: $cursor) {
              nodes {
@@ -663,8 +664,8 @@ class IssueManager(BaseManager[LinearIssue]):
              }
            }
          }
-       }
-       """
+        }
+        """
 
         # Use our extract_and_cache helper method
         response = self._execute_query(query, {"issueId": issue_id, "cursor": None})
@@ -755,7 +756,7 @@ class IssueManager(BaseManager[LinearIssue]):
             return cached_children
 
         query = """
-       query($parentId: ID!, $cursor: String) {
+        query($parentId: ID!, $cursor: String) {
          issues(filter: { parent: { id: { eq: $parentId } } }, first: 50, after: $cursor) {
            nodes {
              id
@@ -765,8 +766,8 @@ class IssueManager(BaseManager[LinearIssue]):
              endCursor
            }
          }
-       }
-       """
+        }
+        """
 
         # Use our improved pagination method
         issue_nodes = self._handle_pagination(
@@ -790,7 +791,7 @@ class IssueManager(BaseManager[LinearIssue]):
 
         return children
 
-    def get_reactions(self, issue_id: str) -> List[Dict[str, Any]]:
+    def get_reactions(self, issue_id: str) -> List[Reaction]:
         """
         Get reactions to an issue.
 
@@ -798,7 +799,7 @@ class IssueManager(BaseManager[LinearIssue]):
             issue_id: The ID of the issue
 
         Returns:
-            A list of reaction data
+            A list of reaction objects
         """
         # Check cache first
         cached_reactions = self._cache_get("reactions_by_issue", issue_id)
@@ -806,38 +807,35 @@ class IssueManager(BaseManager[LinearIssue]):
             return cached_reactions
 
         query = """
-       query($issueId: String!, $cursor: String) {
-         reactions(filter: { issue: { id: { eq: $issueId } } }, first: 50, after: $cursor) {
-           nodes {
-             id
-             emoji
-             user {
-               id
-               name
-               displayName
-             }
-             createdAt
-           }
-           pageInfo {
-             hasNextPage
-             endCursor
-           }
-         }
-       }
-       """
+        query($issueId: String!) {
+          issue(id: $issueId) {
+            reactions {
+              id
+              emoji
+              user {
+                id
+                name
+                displayName
+              }
+              createdAt
+            }
+          }
+        }
+        """
 
-        # Use our improved helper method
-        response = self._execute_query(query, {"issueId": issue_id, "cursor": None})
-
-        if not response:
+        response = self._execute_query(query, {"issueId": issue_id})
+        if not response or "issue" not in response or not response["issue"] or "reactions" not in response["issue"]:
             return []
 
-        reactions = self._extract_and_cache(
-            response,
-            ["reactions"],
-            "reactions_by_issue",
-            issue_id
-        )
+
+        reactions = []
+        for reaction_data in response["issue"]["reactions"]:
+            try:
+                reactions.append(Reaction(**reaction_data))
+            except Exception as e:
+                print(f"Error converting reaction: {e}")
+
+        self._cache_set("reactions_by_issue", issue_id, reactions)
 
         return reactions
 
@@ -896,7 +894,7 @@ class IssueManager(BaseManager[LinearIssue]):
 
         return subscribers
 
-    def get_relations(self, issue_id: str) -> List[Dict[str, Any]]:
+    def get_relations(self, issue_id: str) -> List[IssueRelation]:
         """
         Get relations for an issue.
 
@@ -904,7 +902,7 @@ class IssueManager(BaseManager[LinearIssue]):
             issue_id: The ID of the issue
 
         Returns:
-            A list of relation data dictionaries
+            A list of issue relation objects
         """
         # Check cache first
         cached_relations = self._cache_get("relations_by_issue", issue_id)
@@ -912,41 +910,45 @@ class IssueManager(BaseManager[LinearIssue]):
             return cached_relations
 
         query = """
-        query($issueId: String!, $cursor: String) {
-         issue(id: $issueId) {
-           relations(first: 50, after: $cursor) {
-             nodes {
-               id
-               type
-               targetId
-               sourceId
-               createdAt
-             }
-             pageInfo {
-               hasNextPage
-               endCursor
-             }
-           }
-         }
+        query($issueId: String!) {
+          issue(id: $issueId) {
+            relations {
+              nodes {
+                id
+                type
+                relatedIssue {
+                  id
+                  title
+                }
+                issue {
+                  id
+                  title
+                }
+                createdAt
+              }
+            }
+          }
         }
         """
 
-        # Use our extract_and_cache helper for simpler implementation
-        response = self._execute_query(query, {"issueId": issue_id, "cursor": None})
-
-        if not response or "issue" not in response:
+        response = self._execute_query(query, {"issueId": issue_id})
+        if not response or "issue" not in response or not response["issue"] or "relations" not in response[
+            "issue"] or "nodes" not in response["issue"]["relations"]:
             return []
 
-        relations = self._extract_and_cache(
-            response,
-            ["issue", "relations"],
-            "relations_by_issue",
-            issue_id
-        )
+        relations = []
+        for relation_data in response["issue"]["relations"]["nodes"]:
+            try:
+                relations.append(IssueRelation(**relation_data))
+            except Exception as e:
+                print(f"Error converting relation: {e}")
+
+        # Cache the result
+        self._cache_set("relations_by_issue", issue_id, relations)
 
         return relations
 
-    def get_inverse_relations(self, issue_id: str) -> List[Dict[str, Any]]:
+    def get_inverse_relations(self, issue_id: str) -> List[IssueRelation]:
         """
         Get inverse relations for an issue.
 
@@ -954,49 +956,55 @@ class IssueManager(BaseManager[LinearIssue]):
             issue_id: The ID of the issue
 
         Returns:
-            A list of relation data dictionaries
+            A list of issue relation objects
         """
         # Check cache first
         cached_relations = self._cache_get("inverse_relations_by_issue", issue_id)
         if cached_relations:
             return cached_relations
 
+        # Запрос для inverseRelations, который является Connection
         query = """
-        query($issueId: String!, $cursor: String) {
-         issue(id: $issueId) {
-           inverseRelations(first: 50, after: $cursor) {
-             nodes {
-               id
-               type
-               targetId
-               sourceId
-               createdAt
-             }
-             pageInfo {
-               hasNextPage
-               endCursor
-             }
-           }
-         }
+        query($issueId: String!) {
+          issue(id: $issueId) {
+            inverseRelations {
+              nodes {
+                id
+                type
+                relatedIssue {
+                  id
+                  title
+                }
+                issue {
+                  id
+                  title
+                }
+                createdAt
+              }
+            }
+          }
         }
         """
 
-        # Use our extract_and_cache helper for simpler implementation
-        response = self._execute_query(query, {"issueId": issue_id, "cursor": None})
+        response = self._execute_query(query, {"issueId": issue_id})
 
-        if not response or "issue" not in response:
+        if not response or "issue" not in response or not response["issue"] or "inverseRelations" not in response[
+            "issue"] or "nodes" not in response["issue"]["inverseRelations"]:
             return []
 
-        relations = self._extract_and_cache(
-            response,
-            ["issue", "inverseRelations"],
-            "inverse_relations_by_issue",
-            issue_id
-        )
+        relations = []
+        for relation_data in response["issue"]["inverseRelations"]["nodes"]:
+            try:
+                relations.append(IssueRelation(**relation_data))
+            except Exception as e:
+                print(f"Error converting relation: {e}")
+
+        # Cache the result
+        self._cache_set("inverse_relations_by_issue", issue_id, relations)
 
         return relations
 
-    def get_needs(self, issue_id: str) -> List[Dict[str, Any]]:
+    def get_needs(self, issue_id: str) -> List[CustomerNeedResponse]:
         """
         Get customer needs associated with an issue.
 
@@ -1004,7 +1012,7 @@ class IssueManager(BaseManager[LinearIssue]):
             issue_id: The ID of the issue
 
         Returns:
-            A list of customer need data dictionaries
+            A list of CustomerNeed objects
         """
         # Check cache first
         cached_needs = self._cache_get("needs_by_issue", issue_id)
@@ -1012,37 +1020,47 @@ class IssueManager(BaseManager[LinearIssue]):
             return cached_needs
 
         query = """
-        query($issueId: String!, $cursor: String) {
-         issue(id: $issueId) {
-           needs(first: 50, after: $cursor) {
-             nodes {
-               id
-               title
-               description
-               createdAt
-               updatedAt
-             }
-             pageInfo {
-               hasNextPage
-               endCursor
-             }
-           }
-         }
+        query($issueId: String!) {
+          issue(id: $issueId) {
+            needs {
+              nodes {
+                id
+                createdAt
+                updatedAt
+                archivedAt
+                priority
+                body
+                bodyData
+                url
+                creator {
+                  id
+                  name
+                  displayName
+                }
+              }
+            }
+          }
         }
         """
 
-        # Use our extract_and_cache helper for simpler implementation
-        response = self._execute_query(query, {"issueId": issue_id, "cursor": None})
+        response = self._execute_query(query, {"issueId": issue_id})
 
-        if not response or "issue" not in response:
+        if not response or "issue" not in response or not response["issue"] or "needs" not in response[
+            "issue"] or "nodes" not in response["issue"]["needs"]:
             return []
 
-        needs = self._extract_and_cache(
-            response,
-            ["issue", "needs"],
-            "needs_by_issue",
-            issue_id
-        )
+        needs = []
+        for need_data in response["issue"]["needs"]["nodes"]:
+            try:
+                if "creator" in need_data and need_data["creator"]:
+                    need_data["creator"] = LinearUser(**need_data["creator"])
+
+                needs.append(CustomerNeedResponse(**need_data))
+            except Exception as e:
+                print(f"Error converting need: {e}")
+
+        # Cache the result
+        self._cache_set("needs_by_issue", issue_id, needs)
 
         return needs
 

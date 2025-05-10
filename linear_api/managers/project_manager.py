@@ -11,7 +11,7 @@ from .base_manager import BaseManager
 from ..domain import (
     LinearProject, ProjectStatus, FrequencyResolutionType, ProjectStatusType,
     LinearUser, ProjectMilestone, Comment, LinearTeam, ProjectUpdate,
-    Document, EntityExternalLink, LinearLabel, CustomerNeed
+    Document, EntityExternalLink, LinearLabel, CustomerNeed, ProjectRelation, ProjectHistory
 )
 from ..utils import process_project_data
 
@@ -728,7 +728,7 @@ class ProjectManager(BaseManager[LinearProject]):
 
         return updates
 
-    def get_relations(self, project_id: str) -> List[Dict[str, Any]]:
+    def get_relations(self, project_id: str) -> List[ProjectRelation]:
         """
         Get relations for a project.
 
@@ -736,7 +736,7 @@ class ProjectManager(BaseManager[LinearProject]):
             project_id: The ID of the project
 
         Returns:
-            A list of relation data dictionaries
+            A list of ProjectRelation objects
         """
         # Check cache first
         cached_relations = self._cache_get("relations_by_project", project_id)
@@ -749,9 +749,21 @@ class ProjectManager(BaseManager[LinearProject]):
             relations(first: 50, after: $cursor) {
               nodes {
                 id
-                type
-                targetId
                 createdAt
+                updatedAt
+                archivedAt
+                type
+                anchorType
+                relatedAnchorType
+                relatedProject {
+                  id
+                  name
+                }
+                user {
+                  id
+                  name
+                  displayName
+                }
               }
               pageInfo {
                 hasNextPage
@@ -762,18 +774,20 @@ class ProjectManager(BaseManager[LinearProject]):
         }
         """
 
-        # Use our extract_and_cache helper for simpler implementation
         response = self._execute_query(query, {"projectId": project_id, "cursor": None})
 
         if not response or "project" not in response:
             return []
 
-        relations = self._extract_and_cache(
-            response,
-            ["project", "relations"],
-            "relations_by_project",
-            project_id
+        relations = self._handle_pagination(
+            query,
+            {"projectId": project_id},
+            ["project", "relations", "nodes"],
+            ProjectRelation
         )
+
+        # Cache the result
+        self._cache_set("relations_by_project", project_id, relations)
 
         return relations
 
@@ -934,7 +948,7 @@ class ProjectManager(BaseManager[LinearProject]):
 
         return links
 
-    def get_history(self, project_id: str) -> List[Dict[str, Any]]:
+    def get_history(self, project_id: str) -> List[ProjectHistory]:
         """
         Get the history of a project.
 
@@ -942,7 +956,7 @@ class ProjectManager(BaseManager[LinearProject]):
             project_id: The ID of the project
 
         Returns:
-            A list of history data dictionaries
+            A list of ProjectHistory objects
         """
         # Check cache first
         cached_history = self._cache_get("history_by_project", project_id)
@@ -955,16 +969,10 @@ class ProjectManager(BaseManager[LinearProject]):
            history(first: 50, after: $cursor) {
              nodes {
                id
-               actor {
-                 ... on User {
-                   id
-                   name
-                 }
-               }
                createdAt
-               from
-               to
-               type
+               updatedAt
+               archivedAt
+               entries
              }
              pageInfo {
                hasNextPage
@@ -975,18 +983,20 @@ class ProjectManager(BaseManager[LinearProject]):
         }
         """
 
-        # Use our extract_and_cache helper for simpler implementation
         response = self._execute_query(query, {"projectId": project_id, "cursor": None})
 
         if not response or "project" not in response:
             return []
 
-        history = self._extract_and_cache(
-            response,
-            ["project", "history"],
-            "history_by_project",
-            project_id
+        history = self._handle_pagination(
+            query,
+            {"projectId": project_id},
+            ["project", "history", "nodes"],
+            ProjectHistory
         )
+
+        # Cache the result
+        self._cache_set("history_by_project", project_id, history)
 
         return history
 
@@ -1115,10 +1125,18 @@ class ProjectManager(BaseManager[LinearProject]):
                needs(first: 50, after: $cursor) {
                  nodes {
                    id
-                   title
-                   description
                    createdAt
                    updatedAt
+                   archivedAt
+                   priority
+                   body
+                   bodyData
+                   url
+                   creator {
+                     id
+                     name
+                     displayName
+                   }
                  }
                  pageInfo {
                    hasNextPage
@@ -1129,7 +1147,6 @@ class ProjectManager(BaseManager[LinearProject]):
            }
            """
 
-        # Use our improved helper method with automatic model conversion
         response = self._execute_query(query, {"projectId": project_id, "cursor": None})
 
         if not response or "project" not in response:
@@ -1139,7 +1156,7 @@ class ProjectManager(BaseManager[LinearProject]):
             query,
             {"projectId": project_id},
             ["project", "needs", "nodes"],
-            CustomerNeed  # Pass the model class for automatic conversion
+            CustomerNeed
         )
 
         # Cache the result

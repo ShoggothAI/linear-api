@@ -7,7 +7,7 @@ This module tests the functionality of the UserManager class.
 import pytest
 from datetime import datetime
 
-from linear_api import LinearClient
+from linear_api import LinearClient, LinearTeam
 from linear_api.domain import LinearUser
 
 
@@ -189,3 +189,80 @@ def test_user_organization_field(client):
     if me.organization:
         assert hasattr(me.organization, 'id')
         assert hasattr(me.organization, 'name')
+
+
+def test_get_team_memberships(client):
+    """Test getting team memberships for a user."""
+    # Get the current user
+    me = client.users.get_me()
+
+    # Get team memberships
+    memberships = client.users.get_team_memberships(me.id)
+
+    # Verify the result is a list
+    assert isinstance(memberships, list)
+
+    # Check each membership
+    for membership in memberships:
+        assert 'id' in membership
+        assert 'team' in membership
+        assert isinstance(membership['team'], LinearTeam)
+
+
+def test_get_teams(client):
+    """Test getting teams that a user is a member of."""
+    # Get the current user
+    me = client.users.get_me()
+
+    # Get teams
+    teams = client.users.get_teams(me.id)
+
+    # Verify the result is a list
+    assert isinstance(teams, list)
+
+    # Check each team
+    for team in teams:
+        assert isinstance(team, LinearTeam)
+        assert hasattr(team, 'id')
+        assert hasattr(team, 'name')
+
+
+def test_get_created_issues(client):
+    """Test getting issues created by a user."""
+    # Get the current user
+    me = client.users.get_me()
+
+    # Get created issues
+    issues = client.users.get_created_issues(me.id)
+
+    # Verify the result is a list
+    assert isinstance(issues, list)
+
+    # Check each issue
+    for issue in issues:
+        assert 'id' in issue
+        assert 'title' in issue
+
+
+def test_get_drafts(client):
+    """Test getting document drafts created by a user."""
+    # Get the current user
+    me = client.users.get_me()
+
+    # Get drafts
+    drafts = client.users.get_drafts(me.id)
+
+    # Verify the result is a list (might be empty if no drafts)
+    assert isinstance(drafts, list)
+
+
+def test_get_issue_drafts(client):
+    """Test getting issue drafts created by a user."""
+    # Get the current user
+    me = client.users.get_me()
+
+    # Get issue drafts
+    drafts = client.users.get_issue_drafts(me.id)
+
+    # Verify the result is a list (might be empty if no drafts)
+    assert isinstance(drafts, list)

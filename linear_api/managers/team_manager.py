@@ -8,7 +8,7 @@ from typing import Dict, List, Any, Optional
 
 from .base_manager import BaseManager
 from ..domain import (
-    LinearTeam, LinearState, LinearLabel, LinearUser, LinearUserReference
+    LinearTeam, LinearState, LinearLabel, LinearUser, LinearUserReference, TriageResponsibility
 )
 
 
@@ -1154,7 +1154,7 @@ class TeamManager(BaseManager[LinearTeam]):
 
         return parent
 
-    def get_triage_responsibility(self, team_id: str) -> Dict[str, Any]:
+    def get_triage_responsibility(self, team_id: str) -> TriageResponsibility:
         """
         Get triage responsibility data for a team.
 
@@ -1174,21 +1174,23 @@ class TeamManager(BaseManager[LinearTeam]):
           team(id: $teamId) {
             triageResponsibility {
               id
-              scope
-              user {
-                id
-                name
-                displayName
-                email
-              }
-              schedule {
+              createdAt
+              updatedAt
+              archivedAt
+              action
+              timeSchedule {
                 createdAt
-                endsAt
                 entries {
                   startsAt
                   endsAt
                   userId
                 }
+              }
+              currentUser {
+                id
+                name
+                displayName
+                email
               }
             }
           }
@@ -1203,14 +1205,14 @@ class TeamManager(BaseManager[LinearTeam]):
 
         triage_data = response["team"]["triageResponsibility"]
 
-        # If the user field is present, convert it to a LinearUser object
-        if "user" in triage_data and triage_data["user"]:
-            triage_data["user"] = LinearUser(**triage_data["user"])
+        if triage_data:
+            triage_responsibility = TriageResponsibility(**triage_data)
 
-        # Cache the result
-        self._cache_set("triage_responsibility_by_team", team_id, triage_data)
+            # Cache the result
+            self._cache_set("triage_responsibility_by_team", team_id, triage_responsibility)
 
-        return triage_data
+            return triage_responsibility
+        return {}
 
     def _cache_states(self, team_id: str, states: List[LinearState]) -> None:
         """
