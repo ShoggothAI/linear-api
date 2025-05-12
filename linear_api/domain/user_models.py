@@ -77,6 +77,98 @@ class LinearUser(LinearModel):
     # Complex fields with their models
     organization: Optional[Organization] = None
 
+    # Property getters for missing fields using manager methods
+
+    @property
+    def assigned_issues(self) -> Dict[str, "LinearIssue"]:
+        """
+        Get issues assigned to this user.
+
+        Returns:
+            A dictionary mapping issue IDs to LinearIssue objects
+        """
+        if hasattr(self, "_client") and self._client:
+            try:
+                return self._client.users.get_assigned_issues(self.id)
+            except Exception as e:
+                print(f"Error fetching assigned issues for user {self.id}: {e}")
+        return {}
+
+    @property
+    def created_issues(self) -> List[Dict[str, Any]]:
+        """
+        Get issues created by this user.
+
+        Returns:
+            A list of issue data dictionaries
+        """
+        if hasattr(self, "_client") and self._client:
+            try:
+                return self._client.users.get_created_issues(self.id)
+            except Exception as e:
+                print(f"Error fetching created issues for user {self.id}: {e}")
+        return []
+
+    @property
+    def drafts(self) -> List["Draft"]:
+        """
+        Get document drafts created by this user.
+
+        Returns:
+            A list of Draft objects for the user
+        """
+        if hasattr(self, "_client") and self._client:
+            try:
+                return self._client.users.get_drafts(self.id)
+            except Exception as e:
+                print(f"Error fetching drafts for user {self.id}: {e}")
+        return []
+
+    @property
+    def issue_drafts(self) -> List["IssueDraft"]:
+        """
+        Get issue drafts created by this user.
+
+        Returns:
+            A list of IssueDraft objects for the user
+        """
+        if hasattr(self, "_client") and self._client:
+            try:
+                return self._client.users.get_issue_drafts(self.id)
+            except Exception as e:
+                print(f"Error fetching issue drafts for user {self.id}: {e}")
+        return []
+
+    @property
+    def team_memberships(self) -> List[Dict[str, Any]]:
+        """
+        Get team memberships for this user.
+
+        Returns:
+            A list of team membership data
+        """
+        if hasattr(self, "_client") and self._client:
+            try:
+                return self._client.users.get_team_memberships(self.id)
+            except Exception as e:
+                print(f"Error fetching team memberships for user {self.id}: {e}")
+        return []
+
+    @property
+    def teams(self) -> List["LinearTeam"]:
+        """
+        Get teams that this user is a member of.
+
+        Returns:
+            A list of LinearTeam objects
+        """
+        if hasattr(self, "_client") and self._client:
+            try:
+                return self._client.users.get_teams(self.id)
+            except Exception as e:
+                print(f"Error fetching teams for user {self.id}: {e}")
+        return []
+
 
 class UserConnection(LinearModel):
     """Connection model for users"""

@@ -10,6 +10,7 @@ from .base_manager import BaseManager
 from ..domain import (
     LinearTeam, LinearState, LinearLabel, LinearUser, LinearUserReference, TriageResponsibility
 )
+from ..utils import enrich_with_client
 
 
 class TeamManager(BaseManager[LinearTeam]):
@@ -20,6 +21,7 @@ class TeamManager(BaseManager[LinearTeam]):
     like workflow states.
     """
 
+    @enrich_with_client
     def get(self, team_id: str) -> LinearTeam:
         """
         Fetch a team by ID.
@@ -192,6 +194,7 @@ class TeamManager(BaseManager[LinearTeam]):
 
         return team
 
+    @enrich_with_client
     def get_all(self) -> Dict[str, LinearTeam]:
         """
         Get all teams in the organization.
@@ -492,6 +495,7 @@ class TeamManager(BaseManager[LinearTeam]):
 
         raise ValueError(f"State '{state_name}' not found in team {team_id}")
 
+    @enrich_with_client
     def get_members(self, team_id: str) -> List[LinearUser]:
         """
         Get members of a team.
@@ -933,6 +937,7 @@ class TeamManager(BaseManager[LinearTeam]):
             print(f"Warning: Failed to get templates: {str(e)}")
             return []
 
+    @enrich_with_client
     def get_children(self, team_id: str) -> List[LinearTeam]:
         """
         Get child teams for a team.
@@ -982,6 +987,7 @@ class TeamManager(BaseManager[LinearTeam]):
 
         return children
 
+    @enrich_with_client
     def get_issues(self, team_id: str) -> List[Dict[str, Any]]:
         """
         Get issues for a team.
@@ -1040,6 +1046,7 @@ class TeamManager(BaseManager[LinearTeam]):
 
         return issues
 
+    @enrich_with_client
     def get_projects(self, team_id: str) -> Dict[str, Any]:
         """
         Get projects for a team.
@@ -1106,6 +1113,7 @@ class TeamManager(BaseManager[LinearTeam]):
 
         return webhooks
 
+    @enrich_with_client
     def get_parent(self, team_id: str) -> Optional[LinearTeam]:
         """
         Get the parent team of a team.

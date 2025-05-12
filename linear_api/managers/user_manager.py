@@ -11,6 +11,7 @@ from ..domain import (
     LinearUser, LinearTeam, LinearIssue,
     Draft, IssueDraft
 )
+from ..utils import enrich_with_client
 
 
 class UserManager(BaseManager[LinearUser]):
@@ -20,6 +21,7 @@ class UserManager(BaseManager[LinearUser]):
     This class provides methods for retrieving users and user-related resources.
     """
 
+    @enrich_with_client
     def get(self, user_id: str) -> LinearUser:
         """
         Fetch a Linear user by ID.
@@ -102,6 +104,7 @@ class UserManager(BaseManager[LinearUser]):
 
         return user
 
+    @enrich_with_client
     def get_all(self) -> Dict[str, LinearUser]:
         """
         Get all users in the organization.
@@ -301,6 +304,7 @@ class UserManager(BaseManager[LinearUser]):
 
         raise ValueError(f"No user found matching '{name}'")
 
+    @enrich_with_client
     def get_me(self) -> LinearUser:
         """
         Get the current user (based on the API key).
@@ -334,6 +338,7 @@ class UserManager(BaseManager[LinearUser]):
 
         return user
 
+    @enrich_with_client
     def get_assigned_issues(self, user_id: str) -> Dict[str, LinearIssue]:
         """
         Get issues assigned to a user.
@@ -451,6 +456,7 @@ class UserManager(BaseManager[LinearUser]):
 
         return membership_nodes
 
+    @enrich_with_client
     def get_teams(self, user_id: str) -> List[LinearTeam]:
         """
         Get teams that a user is a member of.
