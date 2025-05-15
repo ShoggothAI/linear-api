@@ -11,9 +11,9 @@ from .base_manager import BaseManager
 from ..domain import (
     LinearProject, ProjectStatus, FrequencyResolutionType, ProjectStatusType,
     LinearUser, ProjectMilestone, Comment, LinearTeam, ProjectUpdate,
-    Document, EntityExternalLink, LinearLabel, CustomerNeed, ProjectRelation, ProjectHistory
+    Document, EntityExternalLink, LinearLabel, CustomerNeed, ProjectRelation, ProjectHistory, LinearIssue
 )
-from ..utils import process_project_data
+from ..utils import process_project_data, enrich_with_client
 
 
 class ProjectManager(BaseManager[LinearProject]):
@@ -25,6 +25,7 @@ class ProjectManager(BaseManager[LinearProject]):
     milestones, issues, etc.
     """
 
+    @enrich_with_client
     def get(self, project_id: str) -> LinearProject:
         """
         Fetch a project by ID.
@@ -120,6 +121,11 @@ class ProjectManager(BaseManager[LinearProject]):
                 documentContent {
                     id
                     content
+                    contentState
+                    createdAt
+                    updatedAt
+                    archivedAt
+                    restoredAt
                 }
 
                 # We're not fetching complex connection fields to keep the query size manageable
@@ -141,6 +147,7 @@ class ProjectManager(BaseManager[LinearProject]):
 
         return project
 
+    @enrich_with_client
     def create(self, name: str, team_name: str, description: Optional[str] = None) -> LinearProject:
         """
         Create a new project in Linear.
@@ -192,6 +199,7 @@ class ProjectManager(BaseManager[LinearProject]):
         project_id = response["projectCreate"]["project"]["id"]
         return self.get(project_id)
 
+    @enrich_with_client
     def update(self, project_id: str, **kwargs) -> LinearProject:
         """
         Update an existing project in Linear.
@@ -266,6 +274,7 @@ class ProjectManager(BaseManager[LinearProject]):
 
         return True
 
+    @enrich_with_client
     def get_all(self, team_id: Optional[str] = None) -> Dict[str, LinearProject]:
         """
         Get all projects, optionally filtered by team.
@@ -465,6 +474,7 @@ class ProjectManager(BaseManager[LinearProject]):
         team_info = f" in team {team_id}" if team_id else ""
         raise ValueError(f"Project '{project_name}'{team_info} not found")
 
+    @enrich_with_client
     def get_members(self, project_id: str) -> List[LinearUser]:
         """
         Get members of a project.
@@ -622,7 +632,8 @@ class ProjectManager(BaseManager[LinearProject]):
 
         return comments
 
-    def get_issues(self, project_id: str) -> List[Dict[str, Any]]:
+    @enrich_with_client
+    def get_issues(self, project_id: str) -> List[LinearIssue]:
         """
         Get issues for a project.
 
@@ -791,6 +802,7 @@ class ProjectManager(BaseManager[LinearProject]):
 
         return relations
 
+    @enrich_with_client
     def get_teams(self, project_id: str) -> List[LinearTeam]:
         """
         Get teams associated with a project.

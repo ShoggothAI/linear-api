@@ -266,3 +266,26 @@ def test_get_issue_drafts(client):
 
     # Verify the result is a list (might be empty if no drafts)
     assert isinstance(drafts, list)
+
+
+def test_user_properties(client):
+    """Test that user properties work correctly with _client reference."""
+    # Get the current user
+    me = client.users.get_me()
+
+    # Test property access - verify they don't raise exceptions
+    # Assigned issues property
+    assigned_issues = me.assignedIssues
+    assert isinstance(assigned_issues, dict)
+
+    # Created issues property
+    created_issues = me.createdIssues
+    assert isinstance(created_issues, list)
+
+    # Teams property
+    teams = me.teams
+    assert isinstance(teams, list)
+
+    # Team memberships property
+    team_memberships = me.teamMemberships
+    assert isinstance(team_memberships, list)

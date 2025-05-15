@@ -6,10 +6,11 @@ This module provides the IssueManager class for working with Linear issues.
 
 import json
 from datetime import datetime
-from typing import Dict, List, Any, ClassVar, Optional
+from typing import Dict, List, Any
 from urllib.parse import urlparse
 
 from .base_manager import BaseManager
+from ..domain import IssueRelation, CustomerNeedResponse
 from ..domain import (
     LinearIssue,
     LinearIssueInput,
@@ -17,10 +18,9 @@ from ..domain import (
     LinearAttachmentInput,
     LinearPriority,
     Comment,
-    LinearUser, LinearModel, Reaction
+    LinearUser, Reaction
 )
-from ..domain.issue_models import IssueRelation, CustomerNeedResponse
-from ..utils import process_issue_data
+from ..utils import process_issue_data, enrich_with_client
 
 
 class IssueManager(BaseManager[LinearIssue]):
@@ -32,6 +32,7 @@ class IssueManager(BaseManager[LinearIssue]):
     attachments, comments, and history.
     """
 
+    @enrich_with_client
     def get(self, issue_id: str) -> LinearIssue:
         """
         Fetch a Linear issue by ID.
@@ -146,6 +147,7 @@ class IssueManager(BaseManager[LinearIssue]):
 
         return issue
 
+    @enrich_with_client
     def create(self, issue: LinearIssueInput) -> LinearIssue:
         """
         Create a new issue in Linear.
@@ -210,6 +212,7 @@ class IssueManager(BaseManager[LinearIssue]):
         # Return the full issue object
         return self.get(new_issue_id)
 
+    @enrich_with_client
     def update(self, issue_id: str, update_data: LinearIssueUpdateInput) -> LinearIssue:
         """
         Update an existing issue in Linear.
@@ -336,6 +339,7 @@ class IssueManager(BaseManager[LinearIssue]):
 
         return True
 
+    @enrich_with_client
     def get_by_team(self, team_name: str) -> Dict[str, LinearIssue]:
         """
         Get all issues for a specific team.
@@ -394,6 +398,7 @@ class IssueManager(BaseManager[LinearIssue]):
 
         return issues
 
+    @enrich_with_client
     def get_by_project(self, project_id: str) -> Dict[str, LinearIssue]:
         """
         Get all issues for a specific project.
@@ -447,6 +452,7 @@ class IssueManager(BaseManager[LinearIssue]):
 
         return issues
 
+    @enrich_with_client
     def get_all(self) -> Dict[str, LinearIssue]:
         """
         Get all issues from all teams in the organization.
@@ -839,6 +845,7 @@ class IssueManager(BaseManager[LinearIssue]):
 
         return reactions
 
+    @enrich_with_client
     def get_subscribers(self, issue_id: str) -> List[LinearUser]:
         """
         Get subscribers of an issue.

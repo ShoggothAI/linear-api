@@ -572,3 +572,49 @@ def test_get_webhooks(client, test_team_name):
         assert 'label' in webhook
         assert 'url' in webhook
         assert 'enabled' in webhook
+
+
+def test_team_membership_property(client, test_team_name):
+    """Test that the team model's membership property works."""
+    # First, get the team ID by name
+    team_id = client.teams.get_id_by_name(test_team_name)
+
+    # Then get the team by ID
+    team = client.teams.get(team_id)
+
+    try:
+        membership = team.membership
+        print(f"Got membership: {membership}")
+    except Exception as e:
+        assert False, f"Failed to access membership property: {e}"
+
+
+def test_team_properties(client, test_team_name):
+    """Test that team properties work correctly with _client reference."""
+    # Get the team
+    team_id = client.teams.get_id_by_name(test_team_name)
+    team = client.teams.get(team_id)
+
+    # Test property access - verify they don't raise exceptions
+    # Children property
+    children = team.children
+    assert isinstance(children, list)
+
+    # Members property
+    members = team.members
+    assert isinstance(members, list)
+
+    # Active cycle property
+    active_cycle = team.activeCycle
+    # May be None if no active cycle, but shouldn't raise exception
+
+    # Issues property
+    issues = team.issues
+    assert isinstance(issues, list)
+
+    # Membership property
+    try:
+        membership = team.membership
+        # Membership may be None, but should not raise exception due to missing _client
+    except Exception as e:
+        assert False, f"Failed to access membership property: {e}"

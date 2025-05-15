@@ -425,3 +425,33 @@ def test_get_needs(client, test_issue):
 
     # Verify the result is a list (might be empty for a new issue)
     assert isinstance(needs, list)
+
+
+def test_issue_properties(client, test_issue):
+    """Test that issue properties work correctly with _client reference."""
+    # Get the issue
+    issue = client.issues.get(test_issue.id)
+
+    # Test property access - verify they don't raise exceptions
+    # Parent property (might be None but shouldn't raise exception)
+    parent = issue.parent
+
+    # Children property
+    children = issue.children
+    assert isinstance(children, dict)
+
+    # Comments property
+    comments = issue.comments
+    assert isinstance(comments, list)
+
+    # History property
+    history = issue.history
+    assert isinstance(history, list)
+
+    # Relations property
+    relations = issue.relations
+    assert isinstance(relations, list)
+
+    # Subscribers property
+    subscribers = issue.subscribers
+    assert isinstance(subscribers, list)

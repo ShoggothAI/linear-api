@@ -509,3 +509,49 @@ def test_user_organization_relationship(client):
     assert hasattr(team, 'organization')
     if team.organization:
         assert team.organization.id == org.id
+
+
+def test_client_reference_enrich(client, test_team_name, test_project):
+    """Test that models are properly enriched with client reference."""
+    # Get test objects
+    team = client.teams.get(client.teams.get_id_by_name(test_team_name))
+
+    # Check that _client exists and is properly set
+    assert hasattr(team, "_client")
+    assert team._client is client
+
+    # Test nested objects have client reference too
+    if team.defaultIssueState:
+        assert hasattr(team.defaultIssueState, "_client")
+        assert team.defaultIssueState._client is client
+
+    # Test that project has client reference
+    assert hasattr(test_project, "_client")
+    assert test_project._client is client
+
+    # Create a test issue
+    from linear_api.domain import LinearIssueInput
+
+    issue_input = LinearIssueInput(
+        title=f"Test Client Reference {int(time.time())}",
+        teamName=test_team_name
+    )
+
+    issue = client.issues.create(issue_input)
+
+    try:
+        # Check the issue has client reference
+        assert hasattr(issue, "_client")
+        assert issue._client is client
+
+        # Check the issue's team has client reference
+        assert hasattr(issue.team, "_client")
+        assert issue.team._client is client
+
+        # Get user and check client reference
+        me = client.users.get_me()
+        assert hasattr(me, "_client")
+        assert me._client is client
+    finally:
+        # Clean up
+        client.issues.delete(issue.id)

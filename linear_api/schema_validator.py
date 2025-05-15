@@ -5,12 +5,12 @@ This module uses GraphQL introspection to check if our domain models are using a
 from the Linear API. It helps ensure our models are comprehensive and up-to-date.
 """
 
-from typing import Dict, List, Set, Any, Optional, Tuple
 import inspect
 import os
+from typing import Dict, Set, Any, Tuple
 
 from pydantic import BaseModel
-from linear_api.domain.base_domain import LinearModel
+
 from linear_api.domain import (
     LinearIssue,
     LinearUser,
@@ -20,6 +20,7 @@ from linear_api.domain import (
     LinearTeam,
     LinearAttachment,
 )
+from linear_api.domain.base_domain import LinearModel
 from linear_api.utils import call_linear_api
 
 
@@ -68,7 +69,7 @@ def get_schema_for_type(type_name: str, api_key: str) -> Dict[str, Any]:
 
 def get_model_fields(model_class: type[LinearModel]) -> Set[str]:
     """
-    Get all field names from a Pydantic model, excluding those listed in model_config.exclude.
+    Get all field names from a Pydantic model, including @property methods.
 
     Args:
         model_class: The Pydantic model class to inspect
@@ -81,6 +82,11 @@ def get_model_fields(model_class: type[LinearModel]) -> Set[str]:
 
     # Get all fields from the model
     all_fields = set(model_class.__annotations__.keys())
+
+    # Add property methods
+    for name, member in inspect.getmembers(model_class):
+        if isinstance(member, property):
+            all_fields.add(name)
 
     # Get fields to exclude from model_config
     excluded_fields = set()
@@ -101,7 +107,7 @@ def get_model_fields(model_class: type[LinearModel]) -> Set[str]:
 
 
 def compare_fields(
-    model_class: type[LinearModel], api_key: str
+        model_class: type[LinearModel], api_key: str
 ) -> Tuple[Set[str], Set[str], Set[str]]:
     """
     Compare fields between a Pydantic model and a GraphQL type.
@@ -174,7 +180,8 @@ def validate_model(model_class: type[LinearModel], api_key: str) -> Dict[str, An
             "known_missing_fields": sorted(known_missing),
             "known_extra_fields": sorted(known_extra),
             "completeness": (
-                len(common) / (len(common) + len(missing) + len(known_missing)) if common or missing or known_missing else 1.0
+                len(common) / (len(common) + len(missing) + len(
+                    known_missing)) if common or missing or known_missing else 1.0
             ),
         }
     except Exception as e:
@@ -299,7 +306,7 @@ def get_field_details(graphql_type_name: str, api_key: str) -> Dict[str, Dict[st
 
 
 def suggest_model_improvements(
-    model_class: type[LinearModel], api_key: str
+        model_class: type[LinearModel], api_key: str
 ) -> str:
     """
     Generate suggestions for improving a model based on missing fields.

@@ -65,7 +65,6 @@ class LinearAttachment(LinearModel):
     source: Optional[str] = None
     sourceType: Optional[str] = None
 
-
     creator: Optional[LinearUser] = None
     externalUserCreator: Optional[ExternalUser] = None
 
@@ -91,17 +90,6 @@ class LinearIssue(LinearModel):
 
     linear_class_name: ClassVar[str] = "Issue"
     known_extra_fields: ClassVar[List[str]] = ["parentId"]
-    known_missing_fields: ClassVar[List[str]] = [
-        "parent",
-        "children",
-        "comments",
-        "history",
-        "inverseRelations",
-        "needs",
-        "reactions",
-        "relations",
-        "subscribers"
-    ]
 
     # Required fields
     id: str
@@ -166,6 +154,143 @@ class LinearIssue(LinearModel):
     favorite: Optional[Favorite] = None
     identifier: Optional[str] = None
     descriptionState: Optional[str] = None
+
+    @property
+    def parent(self) -> Optional["LinearIssue"]:
+        """
+        Get the parent issue of this issue.
+
+        Returns:
+            The parent LinearIssue or None if there is no parent
+        """
+        if hasattr(self, "_client") and self._client:
+            try:
+                return self._client.issues.get(self.parentId)
+            except Exception as e:
+                print(f"Error fetching parent issue {self.parentId}: {e}")
+        return None
+
+    @property
+    def children(self) -> Dict[str, "LinearIssue"]:
+        """
+        Get the child issues of this issue.
+
+        Returns:
+            A dictionary mapping issue IDs to LinearIssue objects
+        """
+        if hasattr(self, "_client") and self._client:
+            try:
+                return self._client.issues.get_children(self.id)
+            except Exception as e:
+                print(f"Error fetching child issues for {self.id}: {e}")
+        return {}
+
+    @property
+    def comments(self) -> List[Comment]:
+        """
+        Get comments for this issue.
+
+        Returns:
+            A list of Comment objects
+        """
+        if hasattr(self, "_client") and self._client:
+            try:
+                return self._client.issues.get_comments(self.id)
+            except Exception as e:
+                print(f"Error fetching comments for issue {self.id}: {e}")
+        return []
+
+    @property
+    def history(self) -> List[Dict[str, Any]]:
+        """
+        Get the change history for this issue.
+
+        Returns:
+            A list of history items
+        """
+        if hasattr(self, "_client") and self._client:
+            try:
+                return self._client.issues.get_history(self.id)
+            except Exception as e:
+                print(f"Error fetching history for issue {self.id}: {e}")
+        return []
+
+    @property
+    def relations(self) -> List["IssueRelation"]:
+        """
+        Get relations for this issue.
+
+        Returns:
+            A list of issue relation objects
+        """
+        if hasattr(self, "_client") and self._client:
+            try:
+                return self._client.issues.get_relations(self.id)
+            except Exception as e:
+                print(f"Error fetching relations for issue {self.id}: {e}")
+        return []
+
+    @property
+    def inverseRelations(self) -> List["IssueRelation"]:
+        """
+        Get inverse relations for this issue.
+
+        Returns:
+            A list of issue relation objects
+        """
+        if hasattr(self, "_client") and self._client:
+            try:
+                return self._client.issues.get_inverse_relations(self.id)
+            except Exception as e:
+                print(f"Error fetching inverse relations for issue {self.id}: {e}")
+        return []
+
+    @property
+    def needs(self) -> List["CustomerNeedResponse"]:
+        """
+        Get customer needs associated with this issue.
+
+        Returns:
+            A list of CustomerNeedResponse objects
+        """
+        if hasattr(self, "_client") and self._client:
+            try:
+                return self._client.issues.get_needs(self.id)
+            except Exception as e:
+                print(f"Error fetching needs for issue {self.id}: {e}")
+        else:
+            print(f"Warning: Cannot fetch needs, no manager reference available for issue {self.id}")
+        return []
+
+    @property
+    def reactions(self) -> List["Reaction"]:
+        """
+        Get reactions to this issue.
+
+        Returns:
+            A list of reaction objects
+        """
+        if hasattr(self, "_client") and self._client:
+            try:
+                return self._client.issues.get_reactions(self.id)
+            except Exception as e:
+                print(f"Error fetching reactions for issue {self.id}: {e}")
+        return []
+
+    @property
+    def subscribers(self) -> List[LinearUser]:
+        """
+        Get subscribers to this issue.
+
+        Returns:
+            A list of LinearUser objects
+        """
+        if hasattr(self, "_client") and self._client:
+            try:
+                return self._client.issues.get_subscribers(self.id)
+            except Exception as e:
+                print(f"Error fetching subscribers for issue {self.id}: {e}")
+        return []
 
     @property
     def metadata(self) -> Dict[str, Union[str, int, float]]:

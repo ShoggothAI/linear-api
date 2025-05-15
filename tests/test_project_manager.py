@@ -378,3 +378,30 @@ def test_get_needs(client, test_project):
 
     # Verify the result is a list (might be empty for a new project)
     assert isinstance(needs, list)
+
+
+def test_project_properties(client, test_project):
+    """Test that project properties work correctly with _client reference."""
+    # Get the project
+    project = client.projects.get(test_project.id)
+
+    # Test property access - verify they don't raise exceptions
+    # Documents property
+    documents = project.documents
+    assert isinstance(documents, list)
+
+    # Members property
+    members = project.members
+    assert isinstance(members, list)
+
+    # Issues property
+    issues = project.issues
+    assert isinstance(issues, list)
+
+    # Teams property
+    teams = project.teams
+    assert isinstance(teams, list)
+
+    # Labels property
+    labels = project.labels
+    assert isinstance(labels, list)
