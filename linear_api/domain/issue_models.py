@@ -90,17 +90,6 @@ class LinearIssue(LinearModel):
 
     linear_class_name: ClassVar[str] = "Issue"
     known_extra_fields: ClassVar[List[str]] = ["parentId"]
-    known_missing_fields: ClassVar[List[str]] = [
-        "parent",
-        "children",
-        "comments",
-        "history",
-        "inverseRelations",
-        "needs",
-        "reactions",
-        "relations",
-        "subscribers"
-    ]
 
     # Required fields
     id: str
@@ -242,7 +231,7 @@ class LinearIssue(LinearModel):
         return []
 
     @property
-    def inverse_relations(self) -> List["IssueRelation"]:
+    def inverseRelations(self) -> List["IssueRelation"]:
         """
         Get inverse relations for this issue.
 

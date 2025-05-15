@@ -33,14 +33,6 @@ class LinearUser(LinearModel):
     Represents a complete user in Linear.
     """
     linear_class_name: ClassVar[str] = "User"
-    known_missing_fields: ClassVar[List[str]] = [
-        "assignedIssues",
-        "createdIssues",
-        "drafts",
-        "issueDrafts",
-        "teamMemberships",
-        "teams"
-    ]
 
     # Required fields
     id: str
@@ -80,7 +72,7 @@ class LinearUser(LinearModel):
     # Property getters for missing fields using manager methods
 
     @property
-    def assigned_issues(self) -> Dict[str, "LinearIssue"]:
+    def assignedIssues(self) -> Dict[str, "LinearIssue"]:
         """
         Get issues assigned to this user.
 
@@ -95,7 +87,7 @@ class LinearUser(LinearModel):
         return {}
 
     @property
-    def created_issues(self) -> List[Dict[str, Any]]:
+    def createdIssues(self) -> List[Dict[str, Any]]:
         """
         Get issues created by this user.
 
@@ -125,7 +117,7 @@ class LinearUser(LinearModel):
         return []
 
     @property
-    def issue_drafts(self) -> List["IssueDraft"]:
+    def issueDrafts(self) -> List["IssueDraft"]:
         """
         Get issue drafts created by this user.
 
@@ -140,7 +132,7 @@ class LinearUser(LinearModel):
         return []
 
     @property
-    def team_memberships(self) -> List[Dict[str, Any]]:
+    def teamMemberships(self) -> List[Dict[str, Any]]:
         """
         Get team memberships for this user.
 

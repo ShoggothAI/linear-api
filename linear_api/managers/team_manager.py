@@ -8,7 +8,7 @@ from typing import Dict, List, Any, Optional
 
 from .base_manager import BaseManager
 from ..domain import (
-    LinearTeam, LinearState, LinearLabel, LinearUser, LinearUserReference, TriageResponsibility
+    LinearTeam, LinearState, LinearLabel, LinearUser, LinearUserReference, TriageResponsibility, TeamMembership
 )
 from ..utils import enrich_with_client
 
@@ -41,7 +41,7 @@ class TeamManager(BaseManager[LinearTeam]):
             return cached_team
 
         query = """
-       query GetTeam($teamId: String!) {
+        query GetTeam($teamId: String!) {
            team(id: $teamId) {
                id
                name
@@ -55,7 +55,7 @@ class TeamManager(BaseManager[LinearTeam]):
                displayName
                private
                timezone
-
+        
                parent {
                    id
                    name
@@ -72,14 +72,14 @@ class TeamManager(BaseManager[LinearTeam]):
                }
                progressHistory
                upcomingCycleCount
-
+        
                # Configuration parameters
                autoArchivePeriod
                autoCloseChildIssues
                autoCloseParentIssues
                autoClosePeriod
                autoCloseStateId
-
+        
                # Cycle parameters
                cycleDuration
                cycleStartDay
@@ -89,14 +89,14 @@ class TeamManager(BaseManager[LinearTeam]):
                cycleLockToActive
                cycleIssueAutoAssignCompleted
                cycleIssueAutoAssignStarted
-
+        
                # Estimation parameters
                defaultIssueEstimate
                issueEstimationType
                issueEstimationAllowZero
                issueEstimationExtended
                inheritIssueEstimation
-
+        
                # Other settings
                inviteHash
                issueCount
@@ -106,14 +106,14 @@ class TeamManager(BaseManager[LinearTeam]):
                setIssueSortOrderOnStateChange
                requirePriorityToLeaveTriage
                triageEnabled
-
+        
                # SCIM Parameters
                scimGroupName
                scimManaged
-
+        
                # AI parameters
                aiThreadSummariesEnabled
-
+        
                # Default templates и states с типизированными полями
                defaultIssueState {
                    id
@@ -145,7 +145,7 @@ class TeamManager(BaseManager[LinearTeam]):
                    type
                    color
                }
-
+        
                organization {
                    id
                    name
@@ -168,9 +168,49 @@ class TeamManager(BaseManager[LinearTeam]):
                        endCursor
                    }
                }
+        
+               # Memberships connection
+               memberships {
+                   nodes {
+                       id
+                       createdAt
+                       updatedAt
+                       archivedAt
+                       owner
+                       sortOrder
+                       user {
+                           id
+                           name
+                           displayName
+                       }
+                   }
+                   pageInfo {
+                       hasNextPage
+                       endCursor
+                   }
+               }
+        
+               # Facets - просто запрашиваем id
+               facets {
+                   id
+               }
+        
+               # GitAutomationStates - с правильными полями
+               gitAutomationStates {
+                   nodes {
+                       id
+                       branchPattern
+                       createdAt
+                       updatedAt
+                   }
+                   pageInfo {
+                       hasNextPage
+                       endCursor
+                   }
+               }
            }
-       }
-       """
+        }
+        """
 
         response = self._execute_query(query, {"teamId": team_id})
 
@@ -552,6 +592,77 @@ class TeamManager(BaseManager[LinearTeam]):
         self._cache_set("members_by_team", team_id, members)
 
         return members
+
+    def get_membership(self, team_id: str, user_id: Optional[str] = None) -> Optional[TeamMembership]:
+        """
+        Get the membership of a user in a team.
+
+        Args:
+            team_id: The ID of the team
+            user_id: The ID of the user. If None, current user is used.
+
+        Returns:
+            TeamMembership object or None if not found
+        """
+        # Check cache first
+        cache_key = f"{team_id}:{user_id if user_id else 'current'}"
+        cached_membership = self._cache_get("membership_by_team_user", cache_key)
+        if cached_membership:
+            return cached_membership
+
+        try:
+            # If user_id not provided, get current user
+            if user_id is None:
+                try:
+                    current_user = self.client.users.get_me()
+                    user_id = current_user.id
+                except Exception as e:
+                    print(f"Failed to get current user: {e}")
+                    return None
+
+            query = """
+            query GetTeamMembership($teamId: String!, $userId: String!) {
+              team(id: $teamId) {
+                membership(userId: $userId) {
+                  id
+                  createdAt
+                  updatedAt
+                  archivedAt
+                  owner
+                  sortOrder
+                  user {
+                    id
+                    name
+                    displayName
+                    email
+                  }
+                }
+              }
+            }
+            """
+
+            response = self._execute_query(query, {"teamId": team_id, "userId": user_id})
+
+            if (not response or "team" not in response or not response["team"] or
+                    "membership" not in response["team"] or not response["team"]["membership"]):
+                return None
+
+            membership_data = response["team"]["membership"]
+
+            # Конвертируем user в LinearUser если он есть
+            if "user" in membership_data and membership_data["user"]:
+                from ..domain import LinearUser
+                membership_data["user"] = LinearUser(**membership_data["user"])
+
+            membership = TeamMembership(**membership_data)
+
+            # Cache the result
+            self._cache_set("membership_by_team_user", cache_key, membership)
+
+            return membership
+        except Exception as e:
+            print(f"Failed to get membership for team {team_id} and user {user_id}: {e}")
+            return None
 
     def get_labels(self, team_id: str, include_issue_ids: bool = False) -> List[LinearLabel]:
         """

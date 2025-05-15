@@ -121,6 +121,11 @@ class ProjectManager(BaseManager[LinearProject]):
                 documentContent {
                     id
                     content
+                    contentState
+                    createdAt
+                    updatedAt
+                    archivedAt
+                    restoredAt
                 }
 
                 # We're not fetching complex connection fields to keep the query size manageable

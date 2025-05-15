@@ -75,6 +75,7 @@ from .team_models import (
     LinearTeam,
     TeamConnection,
     TriageResponsibility,
+    TeamMembership,
 )
 # Import user models
 from .user_models import (
@@ -105,7 +106,7 @@ __all__ = [
     'LinearUserReference', 'LinearUser', 'UserConnection', 'Reaction',
 
     # Team models
-    'LinearState', 'LinearTeam', 'TeamConnection', 'TriageResponsibility',
+    'LinearState', 'LinearTeam', 'TeamConnection', 'TriageResponsibility', 'TeamMembership',
 
     # Project models
     'ProjectStatus', 'ProjectMilestone', 'ProjectMilestoneConnection',

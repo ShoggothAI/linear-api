@@ -130,27 +130,24 @@ class CustomerNeedConnection(LinearModel):
     pageInfo: Optional[Dict[str, Any]] = None
 
 
+class DocumentContent(LinearModel):
+    """Represents document content in Linear"""
+    linear_class_name: ClassVar[str] = "DocumentContent"
+
+    id: str
+    content: Optional[str] = None
+    contentState: Optional[str] = None
+    createdAt: Optional[datetime] = None
+    updatedAt: Optional[datetime] = None
+    archivedAt: Optional[datetime] = None
+    restoredAt: Optional[datetime] = None
+
+
 class LinearProject(LinearModel):
     """
     Represents a complete project retrieved from Linear.
     """
     linear_class_name: ClassVar[str] = "Project"
-    known_extra_fields: ClassVar[List[str]] = []
-    known_missing_fields: ClassVar[List[str]] = [
-        "members",
-        "projectMilestones",
-        "comments",
-        "issues",
-        "projectUpdates",
-        "relations",
-        "teams",
-        "documents",
-        "externalLinks",
-        "history",
-        "initiatives",
-        "labels",
-        "needs"
-    ]
 
     # Required fields
     id: str
@@ -212,6 +209,8 @@ class LinearProject(LinearModel):
     issueCountHistory: Optional[Dict[str, Any]] = None
     scopeHistory: Optional[Dict[str, Any]] = None
 
+    documentContent: Optional[DocumentContent] = None
+
     # Property getters for missing fields using manager methods
 
     @property
@@ -230,7 +229,7 @@ class LinearProject(LinearModel):
         return []
 
     @property
-    def project_milestones(self) -> List[ProjectMilestone]:
+    def projectMilestones(self) -> List[ProjectMilestone]:
         """
         Get milestones for this project.
 
@@ -275,7 +274,7 @@ class LinearProject(LinearModel):
         return []
 
     @property
-    def project_updates(self) -> List[ProjectUpdate]:
+    def projectUpdates(self) -> List[ProjectUpdate]:
         """
         Get updates for this project.
 
@@ -335,7 +334,7 @@ class LinearProject(LinearModel):
         return []
 
     @property
-    def external_links(self) -> List[EntityExternalLink]:
+    def externalLinks(self) -> List[EntityExternalLink]:
         """
         Get external links associated with this project.
 
