@@ -10,14 +10,17 @@ from typing import Dict, List, Any
 from urllib.parse import urlparse
 
 from .base_manager import BaseManager
+from ..domain import IssueRelation, CustomerNeedResponse
 from ..domain import (
     LinearIssue,
     LinearIssueInput,
     LinearIssueUpdateInput,
     LinearAttachmentInput,
     LinearPriority,
+    Comment,
+    LinearUser, Reaction
 )
-from ..utils import process_issue_data
+from ..utils import process_issue_data, enrich_with_client
 
 
 class IssueManager(BaseManager[LinearIssue]):
@@ -29,6 +32,7 @@ class IssueManager(BaseManager[LinearIssue]):
     attachments, comments, and history.
     """
 
+    @enrich_with_client
     def get(self, issue_id: str) -> LinearIssue:
         """
         Fetch a Linear issue by ID.
@@ -48,87 +52,87 @@ class IssueManager(BaseManager[LinearIssue]):
             return cached_issue
 
         query = """
-        query GetIssueWithAttachments($issueId: String!) {
-            issue(id: $issueId) {
-                id
-                title
-                description
-                descriptionState
-                url
-                state { id name type color }
-                priority
-                priorityLabel
-                prioritySortOrder
-                sortOrder
-                assignee { id name email displayName avatarUrl createdAt updatedAt archivedAt }
-                team { id name key description }
-                labels{
-                    nodes {
-                            id
-                            name
-                            color
-                          }
-                        }
-                labelIds
-                project { id name description }
-                projectMilestone { id name }
-                cycle { id name number startsAt endsAt }
-                dueDate
-                createdAt
-                updatedAt
-                archivedAt
-                startedAt
-                completedAt
-                startedTriageAt
-                triagedAt
-                canceledAt
-                autoClosedAt
-                autoArchivedAt
-                addedToProjectAt
-                addedToCycleAt
-                addedToTeamAt
-                slaStartedAt
-                slaMediumRiskAt
-                slaHighRiskAt
-                slaBreachesAt
-                slaType
-                snoozedUntilAt
-                suggestionsGeneratedAt
-                number
-                parent { id }
-                estimate
-                branchName
-                customerTicketCount
-                trashed
-                identifier
-                subIssueSortOrder
-                activitySummary
-                reactionData
-                integrationSourceType
-                creator { id name email displayName avatarUrl createdAt updatedAt archivedAt }
-                externalUserCreator { id name email }
-                snoozedBy { id name email displayName avatarUrl createdAt updatedAt archivedAt }
-                botActor { id name }
-                favorite { id createdAt updatedAt }
-                sourceComment { id body createdAt updatedAt }
-                lastAppliedTemplate { id name }
-                recurringIssueTemplate { id name }
-                previousIdentifiers
-                documentContent { id content }
-                attachments {
-                  nodes {
-                    id
-                    url
-                    title
-                    subtitle
-                    metadata
-                    createdAt
-                    updatedAt
-                  }
-                }
-            }
-        }
-        """
+       query GetIssueWithAttachments($issueId: String!) {
+           issue(id: $issueId) {
+               id
+               title
+               description
+               descriptionState
+               url
+               state { id name type color }
+               priority
+               priorityLabel
+               prioritySortOrder
+               sortOrder
+               assignee { id name email displayName avatarUrl createdAt updatedAt archivedAt }
+               team { id name key description }
+               labels{
+                   nodes {
+                           id
+                           name
+                           color
+                         }
+                       }
+               labelIds
+               project { id name description }
+               projectMilestone { id name }
+               cycle { id name number startsAt endsAt }
+               dueDate
+               createdAt
+               updatedAt
+               archivedAt
+               startedAt
+               completedAt
+               startedTriageAt
+               triagedAt
+               canceledAt
+               autoClosedAt
+               autoArchivedAt
+               addedToProjectAt
+               addedToCycleAt
+               addedToTeamAt
+               slaStartedAt
+               slaMediumRiskAt
+               slaHighRiskAt
+               slaBreachesAt
+               slaType
+               snoozedUntilAt
+               suggestionsGeneratedAt
+               number
+               parent { id }
+               estimate
+               branchName
+               customerTicketCount
+               trashed
+               identifier
+               subIssueSortOrder
+               activitySummary
+               reactionData
+               integrationSourceType
+               creator { id name email displayName avatarUrl createdAt updatedAt archivedAt }
+               externalUserCreator { id name email }
+               snoozedBy { id name email displayName avatarUrl createdAt updatedAt archivedAt }
+               botActor { id name }
+               favorite { id createdAt updatedAt }
+               sourceComment { id body createdAt updatedAt }
+               lastAppliedTemplate { id name }
+               recurringIssueTemplate { id name }
+               previousIdentifiers
+               documentContent { id content }
+               attachments {
+                 nodes {
+                   id
+                   url
+                   title
+                   subtitle
+                   metadata
+                   createdAt
+                   updatedAt
+                 }
+               }
+           }
+       }
+       """
 
         response = self._execute_query(query, {"issueId": issue_id})
 
@@ -143,6 +147,7 @@ class IssueManager(BaseManager[LinearIssue]):
 
         return issue
 
+    @enrich_with_client
     def create(self, issue: LinearIssueInput) -> LinearIssue:
         """
         Create a new issue in Linear.
@@ -161,14 +166,14 @@ class IssueManager(BaseManager[LinearIssue]):
 
         # GraphQL mutation to create an issue
         mutation = """
-        mutation CreateIssue($input: IssueCreateInput!) {
-          issueCreate(input: $input) {
-            issue {
-              id
-            }
-          }
-        }
-        """
+       mutation CreateIssue($input: IssueCreateInput!) {
+         issueCreate(input: $input) {
+           issue {
+             id
+           }
+         }
+       }
+       """
 
         # Build input variables from the issue object
         input_vars = self._build_issue_input_vars(issue, team_id)
@@ -207,6 +212,7 @@ class IssueManager(BaseManager[LinearIssue]):
         # Return the full issue object
         return self.get(new_issue_id)
 
+    @enrich_with_client
     def update(self, issue_id: str, update_data: LinearIssueUpdateInput) -> LinearIssue:
         """
         Update an existing issue in Linear.
@@ -224,14 +230,22 @@ class IssueManager(BaseManager[LinearIssue]):
         # GraphQL mutation to update an issue
         mutation = """
         mutation UpdateIssue($id: String!, $input: IssueUpdateInput!) {
-          issueUpdate(id: $id, input: $input) {
-            success
-            issue {
-              id
-            }
-          }
+         issueUpdate(id: $id, input: $input) {
+           success
+           issue {
+             id
+           }
+         }
         }
         """
+
+        try:
+            current_issue = self.get(issue_id)
+            parent_id = current_issue.parentId if hasattr(current_issue, 'parentId') else None
+            old_state_id = current_issue.state.id if current_issue.state else None
+        except ValueError:
+            parent_id = None
+            old_state_id = None
 
         # Build input variables from the update data
         input_vars = self._build_issue_update_vars(issue_id, update_data)
@@ -242,8 +256,12 @@ class IssueManager(BaseManager[LinearIssue]):
         if not response or "issueUpdate" not in response or not response["issueUpdate"]["success"]:
             raise ValueError(f"Failed to update issue with ID: {issue_id}")
 
-        # Invalidate caches after update
         self._cache_invalidate("issues_by_id", issue_id)
+
+        if parent_id:
+            self._cache_invalidate("children_by_issue", parent_id)
+
+        self._cache_invalidate("children_by_issue", issue_id)
 
         # If team or project was changed, invalidate those caches too
         if hasattr(update_data, "teamName") and update_data.teamName:
@@ -255,6 +273,7 @@ class IssueManager(BaseManager[LinearIssue]):
         # If parent was changed, invalidate parent cache
         if hasattr(update_data, "parentId") and update_data.parentId:
             self._cache_invalidate("issues_by_id", update_data.parentId)
+            self._cache_invalidate("children_by_issue", update_data.parentId)
 
         # If we have metadata, create or update an attachment for it
         if update_data.metadata is not None:
@@ -266,8 +285,14 @@ class IssueManager(BaseManager[LinearIssue]):
             )
             self.create_attachment(attachment)
 
-        # Return the updated issue
-        return self.get(issue_id)
+        updated_issue = self.get(issue_id)
+
+        if old_state_id and updated_issue.state and old_state_id != updated_issue.state.id:
+            if updated_issue.team and updated_issue.team.id:
+                self._cache_clear("states_by_team_id")
+                self._cache_clear("states_by_team_id_True")
+
+        return updated_issue
 
     def delete(self, issue_id: str) -> bool:
         """
@@ -293,9 +318,9 @@ class IssueManager(BaseManager[LinearIssue]):
 
         mutation = """
         mutation DeleteIssue($issueId: String!) {
-            issueDelete(id: $issueId) {
-                success
-            }
+           issueDelete(id: $issueId) {
+               success
+           }
         }
         """
 
@@ -314,6 +339,7 @@ class IssueManager(BaseManager[LinearIssue]):
 
         return True
 
+    @enrich_with_client
     def get_by_team(self, team_name: str) -> Dict[str, LinearIssue]:
         """
         Get all issues for a specific team.
@@ -338,19 +364,19 @@ class IssueManager(BaseManager[LinearIssue]):
         # GraphQL query with pagination support
         query = """
         query GetTeamIssues($teamId: ID!, $cursor: String) {
-            issues(filter: { team: { id: { eq: $teamId } } }, first: 50, after: $cursor) {
-                nodes {
-                    id
-                }
-                pageInfo {
-                    hasNextPage
-                    endCursor
-                }
-            }
+           issues(filter: { team: { id: { eq: $teamId } } }, first: 50, after: $cursor) {
+               nodes {
+                   id
+               }
+               pageInfo {
+                   hasNextPage
+                   endCursor
+               }
+           }
         }
         """
 
-        # Get all issue IDs for this team
+        # Get all issue IDs for this team using our improved pagination method
         issue_objects = self._handle_pagination(
             query,
             {"teamId": team_id},
@@ -372,6 +398,7 @@ class IssueManager(BaseManager[LinearIssue]):
 
         return issues
 
+    @enrich_with_client
     def get_by_project(self, project_id: str) -> Dict[str, LinearIssue]:
         """
         Get all issues for a specific project.
@@ -389,21 +416,21 @@ class IssueManager(BaseManager[LinearIssue]):
 
         query = """
         query($projectId: String!, $cursor: String) {
-          project(id: $projectId) {
-            issues(first: 100, after: $cursor) {
-              nodes {
-                id
-              }
-              pageInfo {
-                hasNextPage
-                endCursor
-              }
-            }
-          }
+         project(id: $projectId) {
+           issues(first: 100, after: $cursor) {
+             nodes {
+               id
+             }
+             pageInfo {
+               hasNextPage
+               endCursor
+             }
+           }
+         }
         }
         """
 
-        # Get all issue IDs for this project
+        # Get all issue IDs for this project using our improved pagination method
         issue_objects = self._handle_pagination(
             query,
             {"projectId": project_id},
@@ -425,6 +452,7 @@ class IssueManager(BaseManager[LinearIssue]):
 
         return issues
 
+    @enrich_with_client
     def get_all(self) -> Dict[str, LinearIssue]:
         """
         Get all issues from all teams in the organization.
@@ -439,19 +467,19 @@ class IssueManager(BaseManager[LinearIssue]):
 
         query = """
         query($cursor: String) {
-          issues(first: 100, after: $cursor) {
-            nodes {
-              id
-            }
-            pageInfo {
-              hasNextPage
-              endCursor
-            }
-          }
+         issues(first: 100, after: $cursor) {
+           nodes {
+             id
+           }
+           pageInfo {
+             hasNextPage
+             endCursor
+           }
+         }
         }
         """
 
-        # Get all issue IDs
+        # Get all issue IDs using our improved pagination method
         issue_objects = self._handle_pagination(
             query,
             {},
@@ -506,16 +534,16 @@ class IssueManager(BaseManager[LinearIssue]):
 
         mutation = """
         mutation CreateAttachment($input: AttachmentCreateInput!) {
-            attachmentCreate(input: $input) {
-                success
-                attachment {
-                    id
-                    url
-                    title
-                    subtitle
-                    metadata
-                }
-            }
+           attachmentCreate(input: $input) {
+               success
+               attachment {
+                   id
+                   url
+                   title
+                   subtitle
+                   metadata
+               }
+           }
         }
         """
 
@@ -553,74 +581,51 @@ class IssueManager(BaseManager[LinearIssue]):
 
         query = """
         query($issueId: String!) {
-          issue(id: $issueId) {
-            attachments {
-              nodes {
-                id
-                title
-                url
-                subtitle
-                metadata
-                createdAt
-                updatedAt
-              }
-            }
-          }
+         issue(id: $issueId) {
+           attachments {
+             nodes {
+               id
+               title
+               url
+               subtitle
+               metadata
+               createdAt
+               updatedAt
+               archivedAt
+               bodyData
+               groupBySource
+               source
+               sourceType
+               creator {
+                   id
+                   name
+                   displayName
+               }
+               externalUserCreator {
+                   id
+                   name
+                   email
+               }
+             }
+           }
+         }
         }
         """
 
+        # Use our extract_and_cache helper method for simpler implementation
         response = self._execute_query(query, {"issueId": issue_id})
 
-        if response and "issue" in response and response["issue"] and "attachments" in response["issue"]:
-            attachments = response["issue"]["attachments"]["nodes"]
-            # Cache the result
-            self._cache_set("attachments_by_issue", issue_id, attachments)
-            return attachments
+        if not response or "issue" not in response:
+            return []
 
-        return []
+        attachments = self._extract_and_cache(
+            response,
+            ["issue", "attachments"],
+            "attachments_by_issue",
+            issue_id
+        )
 
-    def get_comments(self, issue_id: str) -> List[Dict[str, Any]]:
-        """
-        Get comments for an issue.
-
-        Args:
-            issue_id: The ID of the issue to get comments for
-
-        Returns:
-            A list of comment data
-        """
-        # Check cache first
-        cached_comments = self._cache_get("comments_by_issue", issue_id)
-        if cached_comments:
-            return cached_comments
-
-        query = """
-        query($issueId: String!) {
-          issue(id: $issueId) {
-            comments {
-              nodes {
-                id
-                body
-                user {
-                  id
-                  name
-                }
-                createdAt
-              }
-            }
-          }
-        }
-        """
-
-        response = self._execute_query(query, {"issueId": issue_id})
-
-        if response and "issue" in response and response["issue"] and "comments" in response["issue"]:
-            comments = response["issue"]["comments"]["nodes"]
-            # Cache the result
-            self._cache_set("comments_by_issue", issue_id, comments)
-            return comments
-
-        return []
+        return attachments
 
     def get_history(self, issue_id: str) -> List[Dict[str, Any]]:
         """
@@ -638,25 +643,406 @@ class IssueManager(BaseManager[LinearIssue]):
             return cached_history
 
         query = """
+        query($issueId: String!, $cursor: String) {
+         issue(id: $issueId) {
+           history(first: 50, after: $cursor) {
+             nodes {
+               id
+               createdAt
+               fromState {
+                 id
+                 name
+               }
+               toState {
+                 id
+                 name
+               }
+               actor {
+                 ... on User {
+                   id
+                   name
+                 }
+               }
+             }
+             pageInfo {
+               hasNextPage
+               endCursor
+             }
+           }
+         }
+        }
+        """
+
+        # Use our extract_and_cache helper method
+        response = self._execute_query(query, {"issueId": issue_id, "cursor": None})
+
+        if not response or "issue" not in response:
+            return []
+
+        history = self._extract_and_cache(
+            response,
+            ["issue", "history"],
+            "history_by_issue",
+            issue_id
+        )
+
+        return history
+
+    def get_comments(self, issue_id: str) -> List[Comment]:
+        """
+        Get comments for an issue.
+
+        Args:
+            issue_id: The ID of the issue to get comments for
+
+        Returns:
+            A list of Comment objects
+        """
+        # Check cache first
+        cached_comments = self._cache_get("comments_by_issue", issue_id)
+        if cached_comments:
+            return cached_comments
+
+        query = """
+        query($issueId: String!, $cursor: String) {
+         issue(id: $issueId) {
+           comments(first: 50, after: $cursor) {
+             nodes {
+               id
+               body
+               user {
+                 id
+                 name
+                 displayName
+                 email
+               }
+               createdAt
+               updatedAt
+             }
+             pageInfo {
+               hasNextPage
+               endCursor
+             }
+           }
+         }
+        }
+        """
+
+        # Use our improved pagination method with automatic model conversion
+        response = self._execute_query(query, {"issueId": issue_id, "cursor": None})
+
+        if not response or "issue" not in response:
+            return []
+
+        comments = self._handle_pagination(
+            query,
+            {"issueId": issue_id},
+            ["issue", "comments", "nodes"],
+            Comment  # Pass the model class for automatic conversion
+        )
+
+        # Cache the result
+        self._cache_set("comments_by_issue", issue_id, comments)
+
+        return comments
+
+    def get_children(self, issue_id: str) -> Dict[str, LinearIssue]:
+        """
+        Get child issues for an issue.
+
+        Args:
+            issue_id: The ID of the parent issue
+
+        Returns:
+            A dictionary mapping issue IDs to LinearIssue objects
+        """
+        # Check cache first
+        cached_children = self._cache_get("children_by_issue", issue_id)
+        if cached_children:
+            return cached_children
+
+        query = """
+        query($parentId: ID!, $cursor: String) {
+         issues(filter: { parent: { id: { eq: $parentId } } }, first: 50, after: $cursor) {
+           nodes {
+             id
+           }
+           pageInfo {
+             hasNextPage
+             endCursor
+           }
+         }
+        }
+        """
+
+        # Use our improved pagination method
+        issue_nodes = self._handle_pagination(
+            query,
+            {"parentId": issue_id},
+            ["issues", "nodes"]
+        )
+
+        # Convert to dictionary of ID -> LinearIssue
+        children = {}
+        for issue_obj in issue_nodes:
+            try:
+                issue = self.get(issue_obj["id"])
+                children[issue.id] = issue
+            except Exception as e:
+                # Log error but continue with other issues
+                print(f"Error fetching child issue {issue_obj['id']}: {e}")
+
+        # Cache the result
+        self._cache_set("children_by_issue", issue_id, children)
+
+        return children
+
+    def get_reactions(self, issue_id: str) -> List[Reaction]:
+        """
+        Get reactions to an issue.
+
+        Args:
+            issue_id: The ID of the issue
+
+        Returns:
+            A list of reaction objects
+        """
+        # Check cache first
+        cached_reactions = self._cache_get("reactions_by_issue", issue_id)
+        if cached_reactions:
+            return cached_reactions
+
+        query = """
         query($issueId: String!) {
           issue(id: $issueId) {
-            history(first: 50) {
+            reactions {
+              id
+              emoji
+              user {
+                id
+                name
+                displayName
+              }
+              createdAt
+            }
+          }
+        }
+        """
+
+        response = self._execute_query(query, {"issueId": issue_id})
+        if not response or "issue" not in response or not response["issue"] or "reactions" not in response["issue"]:
+            return []
+
+
+        reactions = []
+        for reaction_data in response["issue"]["reactions"]:
+            try:
+                reactions.append(Reaction(**reaction_data))
+            except Exception as e:
+                print(f"Error converting reaction: {e}")
+
+        self._cache_set("reactions_by_issue", issue_id, reactions)
+
+        return reactions
+
+    @enrich_with_client
+    def get_subscribers(self, issue_id: str) -> List[LinearUser]:
+        """
+        Get subscribers of an issue.
+
+        Args:
+            issue_id: The ID of the issue
+
+        Returns:
+            A list of LinearUser objects
+        """
+        # Check cache first
+        cached_subscribers = self._cache_get("subscribers_by_issue", issue_id)
+        if cached_subscribers:
+            return cached_subscribers
+
+        query = """
+        query($issueId: String!, $cursor: String) {
+         issue(id: $issueId) {
+           subscribers(first: 50, after: $cursor) {
+             nodes {
+               id
+               name
+               displayName
+               email
+               avatarUrl
+               createdAt
+               updatedAt
+             }
+             pageInfo {
+               hasNextPage
+               endCursor
+             }
+           }
+         }
+        }
+        """
+
+        # Use our improved pagination method with automatic model conversion
+        response = self._execute_query(query, {"issueId": issue_id, "cursor": None})
+
+        if not response or "issue" not in response:
+            return []
+
+        subscribers = self._handle_pagination(
+            query,
+            {"issueId": issue_id},
+            ["issue", "subscribers", "nodes"],
+            LinearUser  # Pass the model class for automatic conversion
+        )
+
+        # Cache the result
+        self._cache_set("subscribers_by_issue", issue_id, subscribers)
+
+        return subscribers
+
+    def get_relations(self, issue_id: str) -> List[IssueRelation]:
+        """
+        Get relations for an issue.
+
+        Args:
+            issue_id: The ID of the issue
+
+        Returns:
+            A list of issue relation objects
+        """
+        # Check cache first
+        cached_relations = self._cache_get("relations_by_issue", issue_id)
+        if cached_relations:
+            return cached_relations
+
+        query = """
+        query($issueId: String!) {
+          issue(id: $issueId) {
+            relations {
+              nodes {
+                id
+                type
+                relatedIssue {
+                  id
+                  title
+                }
+                issue {
+                  id
+                  title
+                }
+                createdAt
+              }
+            }
+          }
+        }
+        """
+
+        response = self._execute_query(query, {"issueId": issue_id})
+        if not response or "issue" not in response or not response["issue"] or "relations" not in response[
+            "issue"] or "nodes" not in response["issue"]["relations"]:
+            return []
+
+        relations = []
+        for relation_data in response["issue"]["relations"]["nodes"]:
+            try:
+                relations.append(IssueRelation(**relation_data))
+            except Exception as e:
+                print(f"Error converting relation: {e}")
+
+        # Cache the result
+        self._cache_set("relations_by_issue", issue_id, relations)
+
+        return relations
+
+    def get_inverse_relations(self, issue_id: str) -> List[IssueRelation]:
+        """
+        Get inverse relations for an issue.
+
+        Args:
+            issue_id: The ID of the issue
+
+        Returns:
+            A list of issue relation objects
+        """
+        # Check cache first
+        cached_relations = self._cache_get("inverse_relations_by_issue", issue_id)
+        if cached_relations:
+            return cached_relations
+
+        # Запрос для inverseRelations, который является Connection
+        query = """
+        query($issueId: String!) {
+          issue(id: $issueId) {
+            inverseRelations {
+              nodes {
+                id
+                type
+                relatedIssue {
+                  id
+                  title
+                }
+                issue {
+                  id
+                  title
+                }
+                createdAt
+              }
+            }
+          }
+        }
+        """
+
+        response = self._execute_query(query, {"issueId": issue_id})
+
+        if not response or "issue" not in response or not response["issue"] or "inverseRelations" not in response[
+            "issue"] or "nodes" not in response["issue"]["inverseRelations"]:
+            return []
+
+        relations = []
+        for relation_data in response["issue"]["inverseRelations"]["nodes"]:
+            try:
+                relations.append(IssueRelation(**relation_data))
+            except Exception as e:
+                print(f"Error converting relation: {e}")
+
+        # Cache the result
+        self._cache_set("inverse_relations_by_issue", issue_id, relations)
+
+        return relations
+
+    def get_needs(self, issue_id: str) -> List[CustomerNeedResponse]:
+        """
+        Get customer needs associated with an issue.
+
+        Args:
+            issue_id: The ID of the issue
+
+        Returns:
+            A list of CustomerNeed objects
+        """
+        # Check cache first
+        cached_needs = self._cache_get("needs_by_issue", issue_id)
+        if cached_needs:
+            return cached_needs
+
+        query = """
+        query($issueId: String!) {
+          issue(id: $issueId) {
+            needs {
               nodes {
                 id
                 createdAt
-                fromState {
+                updatedAt
+                archivedAt
+                priority
+                body
+                bodyData
+                url
+                creator {
                   id
                   name
-                }
-                toState {
-                  id
-                  name
-                }
-                actor {
-                  ... on User {
-                    id
-                    name
-                  }
+                  displayName
                 }
               }
             }
@@ -666,13 +1052,24 @@ class IssueManager(BaseManager[LinearIssue]):
 
         response = self._execute_query(query, {"issueId": issue_id})
 
-        if response and "issue" in response and response["issue"] and "history" in response["issue"]:
-            history = response["issue"]["history"]["nodes"]
-            # Cache the result
-            self._cache_set("history_by_issue", issue_id, history)
-            return history
+        if not response or "issue" not in response or not response["issue"] or "needs" not in response[
+            "issue"] or "nodes" not in response["issue"]["needs"]:
+            return []
 
-        return []
+        needs = []
+        for need_data in response["issue"]["needs"]["nodes"]:
+            try:
+                if "creator" in need_data and need_data["creator"]:
+                    need_data["creator"] = LinearUser(**need_data["creator"])
+
+                needs.append(CustomerNeedResponse(**need_data))
+            except Exception as e:
+                print(f"Error converting need: {e}")
+
+        # Cache the result
+        self._cache_set("needs_by_issue", issue_id, needs)
+
+        return needs
 
     def _set_parent_issue(self, child_id: str, parent_id: str) -> Dict[str, Any]:
         """
@@ -687,16 +1084,16 @@ class IssueManager(BaseManager[LinearIssue]):
         """
         mutation = """
         mutation UpdateIssue($id: String!, $input: IssueUpdateInput!) {
-          issueUpdate(id: $id, input: $input) {
-            issue {
-              id
-              title
-              parent {
-                id
-                title
-              }
-            }
-          }
+         issueUpdate(id: $id, input: $input) {
+           issue {
+             id
+             title
+             parent {
+               id
+               title
+             }
+           }
+         }
         }
         """
 

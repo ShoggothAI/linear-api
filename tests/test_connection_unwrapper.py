@@ -6,7 +6,6 @@ This module tests the functionality of automatic GraphQL connection unwrapping.
 
 import pytest
 from linear_api import LinearClient
-from linear_api.utils.connection_unwrapper import ConnectionUnwrapper
 
 
 @pytest.fixture
@@ -33,11 +32,6 @@ def test_connection_unwrapper_initialization(client):
     # Verify BaseManager classes have connection unwrapping enabled
     assert hasattr(client.teams, "_auto_unwrap_connections")
     assert client.teams._auto_unwrap_connections is True
-
-    # Verify the manager has a connection unwrapper
-    assert hasattr(client.teams, "_connection_unwrapper")
-    assert client.teams._connection_unwrapper is not None
-    assert isinstance(client.teams._connection_unwrapper, ConnectionUnwrapper)
 
 
 def test_connection_unwrapping_enable_disable(client):

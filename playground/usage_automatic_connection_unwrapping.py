@@ -1,8 +1,8 @@
 """
-Example usage of the automatic connection unwrapping feature.
+Comprehensive example to get all projects, teams, and their issues using built-in methods.
 
-This script demonstrates how to use the connection unwrapping functionality
-to simplify working with paginated GraphQL responses.
+This script demonstrates how to use the existing methods in the LinearClient to retrieve
+all issues from all projects and teams.
 """
 
 import os
@@ -13,113 +13,142 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 from linear_api.client import LinearClient
 
 
+def get_all_data():
+    """
+    Get all projects, teams, and their issues using the built-in methods.
 
-def example_with_manual_pagination():
-    """Example using the traditional manual pagination approach."""
+    Returns:
+        Dictionaries of projects, teams, and their issues
+    """
     client = LinearClient()
 
-    # Disable automatic connection unwrapping to demonstrate the difference
-    client.disable_connection_unwrapping()
+    print("=== Retrieving All Data Using Built-in Methods ===")
 
-    print("=== Manual Pagination Example ===")
+    # --- PROJECTS SECTION ---
+    print("\n--- PROJECTS ---")
 
-    # Need to use _handle_pagination to get all projects
-    query = """
-    query GetAllProjects($cursor: String) {
-        projects(first: 10, after: $cursor) {
-            nodes {
-                id
-                name
-            }
-            pageInfo {
-                hasNextPage
-                endCursor
-            }
-        }
-    }
-    """
+    # Get all projects
+    print("Fetching all projects...")
+    all_projects = client.projects.get_all()
+    print(f"Retrieved {len(all_projects)} projects")
 
-    # Manually handle pagination
-    project_nodes = client.teams._handle_pagination(
-        query,
-        {},
-        ["projects", "nodes"]
-    )
+    # Get all issues for each project
+    total_project_issues = 0
+    all_issues_by_project = {}
 
-    print(f"Retrieved {len(project_nodes)} projects with manual pagination")
+    for index, (project_id, project) in enumerate(all_projects.items()):
+        print(f"Fetching issues for project {index + 1}/{len(all_projects)}: {project.name}")
 
-    # To get all issues for each project, we'd need another pagination loop
-    all_issues = {}
-    for project in project_nodes:
-        project_id = project["id"]
+        # Use the built-in method to get all issues for a project
         project_issues = client.issues.get_by_project(project_id)
-        all_issues[project_id] = project_issues
+        all_issues_by_project[project_id] = project_issues
+        total_project_issues += len(project_issues)
 
-    print(f"Retrieved issues for {len(all_issues)} projects")
+        print(f"  - Found {len(project_issues)} issues")
 
-    # Return to default setting
-    client.enable_connection_unwrapping()
+    # --- TEAMS SECTION ---
+    print("\n--- TEAMS ---")
+
+    # Get all teams
+    print("Fetching all teams...")
+    all_teams = client.teams.get_all()
+    print(f"Retrieved {len(all_teams)} teams")
+
+    # Get all issues for each team
+    total_team_issues = 0
+    all_issues_by_team = {}
+
+    for index, (team_id, team) in enumerate(all_teams.items()):
+        print(f"Fetching issues for team {index + 1}/{len(all_teams)}: {team.name}")
+
+        # Get issues for the team using the team name
+        team_issues = client.issues.get_by_team(team.name)
+        all_issues_by_team[team_id] = team_issues
+        total_team_issues += len(team_issues)
+
+        print(f"  - Found {len(team_issues)} issues")
+
+        # Optionally, get team members
+        team_members = client.teams.get_members(team_id)
+        print(f"  - Team has {len(team_members)} members")
+
+        # Optionally, get team states
+        team_states = client.teams.get_states(team_id)
+        print(f"  - Team has {len(team_states)} workflow states")
+
+    # --- SUMMARY ---
+    print("\n=== SUMMARY ===")
+    print(f"Total projects: {len(all_projects)}")
+    print(f"Total teams: {len(all_teams)}")
+    print(f"Total issues in projects: {total_project_issues}")
+    print(f"Total issues in teams: {total_team_issues}")
+
+    # Print issue count per project
+    print("\nIssues per project:")
+    for project_id, project in all_projects.items():
+        issue_count = len(all_issues_by_project.get(project_id, {}))
+        print(f"  - {project.name}: {issue_count} issues")
+
+    # Print issue count per team
+    print("\nIssues per team:")
+    for team_id, team in all_teams.items():
+        issue_count = len(all_issues_by_team.get(team_id, {}))
+        print(f"  - {team.name}: {issue_count} issues")
+
+    return {
+        "projects": all_projects,
+        "project_issues": all_issues_by_project,
+        "teams": all_teams,
+        "team_issues": all_issues_by_team
+    }
 
 
-def example_with_auto_unwrapping():
-    """Example using the new automatic connection unwrapping."""
+def advanced_features_example():
+    """
+    Demonstrates some advanced features of the API client.
+    """
     client = LinearClient()
 
-    # Ensure automatic connection unwrapping is enabled (default)
-    client.enable_connection_unwrapping()
+    print("\n=== ADVANCED FEATURES ===")
 
-    print("=== Automatic Connection Unwrapping Example ===")
+    # Get a specific team by name
+    print("\nLooking up a specific team...")
+    try:
+        # Get all teams first to see what's available
+        all_teams = client.teams.get_all()
+        if all_teams:
+            # Use the first team for demonstration
+            first_team_name = next(iter(all_teams.values())).name
+            team_id = client.teams.get_id_by_name(first_team_name)
+            team = client.teams.get(team_id)
+            print(f"Found team: {team.name} (ID: {team.id})")
 
-    # Simple query that uses connections at multiple levels
-    query = """
-    query {
-        projects(first: 10) {
-            nodes {
-                id
-                name
-                issues(first: 10) {
-                    nodes {
-                        id
-                        title
-                        labels {
-                            nodes {
-                                id
-                                name
-                            }
-                            pageInfo {
-                                hasNextPage
-                                endCursor
-                            }
-                        }
-                    }
-                    pageInfo {
-                        hasNextPage
-                        endCursor
-                    }
-                }
-            }
-            pageInfo {
-                hasNextPage
-                endCursor
-            }
-        }
-    }
-    """
+            # Get team's active cycle
+            active_cycle = client.teams.get_active_cycle(team.id)
+            if active_cycle:
+                print(f"  - Active cycle: {active_cycle.get('name', 'unnamed')} (#{active_cycle.get('number', 'N/A')})")
+            else:
+                print("  - No active cycle")
 
-    # Execute the query once - all connections will be unwrapped automatically
-    result = client.teams._execute_query(query)
+            # Get team's labels
+            team_labels = client.teams.get_labels(team.id)
+            print(f"  - Team has {len(team_labels)} labels")
+        else:
+            print("No teams found")
+    except Exception as e:
+        print(f"Error looking up team: {e}")
 
-    # Access all projects
-    projects = result.get("projects", {}).get("nodes", [])
+    # Get a specific user
+    print("\nLooking up the current user...")
+    try:
+        current_user = client.users.get_me()
+        print(f"Current user: {current_user.displayName} ({current_user.email})")
 
-    # Count projects and issues
-    project_count = len(projects)
-    issue_count = sum(len(project.get("issues", {}).get("nodes", [])) for project in projects)
-
-    print(f"Retrieved {project_count} projects with all their issues in a single query")
-    print(f"Total issues retrieved: {issue_count}")
-
-    # The results include all pages from all connections automatically
+        # Get assigned issues
+        assigned_issues = client.users.get_assigned_issues(current_user.id)
+        print(f"  - You have {len(assigned_issues)} assigned issues")
+    except Exception as e:
+        print(f"Error looking up user: {e}")
 
 
 def main():
@@ -130,10 +159,14 @@ def main():
         print("ERROR: LINEAR_API_KEY environment variable not set")
         return
 
-    # Run both examples for comparison
-    example_with_manual_pagination()
-    print("\n")
-    example_with_auto_unwrapping()
+    # Get all data
+    data = get_all_data()
+
+    # Show advanced features
+    advanced_features_example()
+
+    # Return data for potential further usage
+    return data
 
 
 if __name__ == "__main__":
