@@ -10,8 +10,6 @@ from .base_domain import LinearModel, Connection
 # Import common models
 from .common_models import (
     Organization,
-    Comment,
-    CommentConnection,
     DocumentContent,
     DocumentConnection,
     EntityExternalLinkConnection,
@@ -83,6 +81,8 @@ from .user_models import (
     LinearUser,
     UserConnection,
     Reaction,
+    Comment,
+    CommentConnection,
 )
 
 # List of all public exports
@@ -96,14 +96,14 @@ __all__ = [
     'Day', 'IntegrationService',
 
     # Common models
-    'Organization', 'Comment', 'CommentConnection', 'DocumentContent',
+    'Organization', 'CommentConnection', 'DocumentContent',
     'DocumentConnection', 'EntityExternalLinkConnection', 'Favorite',
     'Template', 'TimelessDate', 'IntegrationsSettings', 'TeamMembership',
     'Draft', 'IssueDraft', 'ActorBot', 'ExternalUser', 'Document',
     'EntityExternalLink',
 
     # User models
-    'LinearUserReference', 'LinearUser', 'UserConnection', 'Reaction',
+    'LinearUserReference', 'LinearUser', 'UserConnection', 'Reaction', 'Comment', 'CommentConnection',
 
     # Team models
     'LinearState', 'LinearTeam', 'TeamConnection', 'TriageResponsibility', 'TeamMembership',

@@ -9,7 +9,6 @@ from typing import Optional, Dict, Any, ClassVar, List
 
 from pydantic import Field
 
-from . import LinearUserReference
 from .base_domain import LinearModel
 
 
@@ -19,27 +18,6 @@ class Organization(LinearModel):
 
     id: str
     name: str
-
-
-class Comment(LinearModel):
-    """Represents a comment in Linear"""
-    linear_class_name: ClassVar[str] = "Comment"
-
-    id: str
-    body: str
-    user: LinearUserReference
-    createdAt: datetime
-    updatedAt: datetime
-
-
-
-class CommentConnection(LinearModel):
-    """Connection model for comments"""
-    linear_class_name: ClassVar[str] = "CommentConnection"
-
-    nodes: List[Comment] = Field(default_factory=list)
-    pageInfo: Optional[Dict[str, Any]] = None
-
 
 class DocumentContent(LinearModel):
     """Represents document content in Linear"""
