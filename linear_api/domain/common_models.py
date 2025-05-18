@@ -9,6 +9,7 @@ from typing import Optional, Dict, Any, ClassVar, List
 
 from pydantic import Field
 
+from . import LinearUserReference
 from .base_domain import LinearModel
 
 
@@ -26,8 +27,10 @@ class Comment(LinearModel):
 
     id: str
     body: str
+    user: LinearUserReference
     createdAt: datetime
     updatedAt: datetime
+
 
 
 class CommentConnection(LinearModel):
