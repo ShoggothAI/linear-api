@@ -604,6 +604,12 @@ class ProjectManager(BaseManager[LinearProject]):
                 body
                 createdAt
                 updatedAt
+                user {
+                     id
+                     name
+                     displayName
+                     email
+                }
               }
               pageInfo {
                 hasNextPage
