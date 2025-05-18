@@ -186,7 +186,7 @@ class Comment(LinearModel):
 
     id: str
     body: str
-    user: LinearUserReference
+    user: Optional[LinearUserReference] = None
     createdAt: datetime
     updatedAt: datetime
 
