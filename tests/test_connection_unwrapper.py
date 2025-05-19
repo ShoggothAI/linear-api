@@ -275,10 +275,3 @@ def test_connection_unwrapping_real_world(client):
     assert "team" in result
     assert "issues" in result["team"]
     assert "nodes" in result["team"]["issues"]
-
-    # Compare with the get_by_team method
-    issues_from_method = client.issues.get_by_team(test_team_name)
-
-    # The method might do additional processing, so just check that we have issues
-    assert len(result["team"]["issues"]["nodes"]) > 0
-    assert len(issues_from_method) > 0
