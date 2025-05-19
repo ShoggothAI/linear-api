@@ -10,11 +10,11 @@ from typing import Optional, Dict, Union, List, Any, ClassVar
 from pydantic import Field
 
 from .base_domain import LinearModel
-from .common_models import DocumentContent, Comment, Favorite, Template, ActorBot, ExternalUser
+from .common_models import DocumentContent, Favorite, Template, ActorBot, ExternalUser
 from .enums import LinearPriority, SLADayCountType, IntegrationService
 from .project_models import LinearProject, ProjectMilestone, Cycle
 from .team_models import LinearTeam, LinearState
-from .user_models import LinearUser, LinearUserReference
+from .user_models import LinearUser, LinearUserReference, Comment
 
 
 class LinearLabel(LinearModel):

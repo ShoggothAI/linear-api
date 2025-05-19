@@ -12,14 +12,14 @@ from pydantic import Field, BaseModel
 from .base_domain import LinearModel
 from .common_models import (
     Favorite, Template, TimelessDate, IntegrationsSettings,
-    Comment, Document, EntityExternalLink
+    Document, EntityExternalLink
 )
 from .enums import (
     DateResolutionType, Day, FrequencyResolutionType,
     ProjectStatusType, ProjectUpdateHealthType
 )
 from .team_models import LinearTeam
-from .user_models import LinearUserReference, LinearUser
+from .user_models import LinearUserReference, LinearUser, Comment
 
 
 class ProjectStatus(LinearModel):
