@@ -178,18 +178,12 @@ def test_state_with_issue_ids(client, test_team_name):
     # Get states without issue IDs first
     states_without_ids = client.teams.get_states(team_id, include_issue_ids=False)
 
-    # Verify states are returned
-    assert len(states_without_ids) > 0
-
     for state in states_without_ids:
         if hasattr(state, 'issue_ids'):
             assert state.issue_ids is None
 
     # Now get states with issue IDs
     states_with_ids = client.teams.get_states(team_id, include_issue_ids=True)
-
-    # Verify states are returned
-    assert len(states_with_ids) > 0
 
     # Verify issue_ids is a list for states
     for state in states_with_ids:

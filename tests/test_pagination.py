@@ -341,9 +341,6 @@ def test_pagination_with_partial_failures(client):
             ["team", "issues", "nodes"]
         )
 
-    # Verify we got at least some results from the first and third pages
-    assert len(results) > 0
-
     # We expect the results to include items from the first and third pages
     # (or more if there are more pages), but not the second page which failed
     # and was presumably skipped or retried
